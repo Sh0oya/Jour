@@ -1,0 +1,7 @@
+{
+  "name": "Journaly",
+  "description": "An intelligent audio journal that listens, understands, and organizes your life. Share your day with June.",
+  "requestFramePermissions": [
+    "microphone"
+  ]
+}
