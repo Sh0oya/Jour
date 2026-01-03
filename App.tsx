@@ -18,7 +18,7 @@ const AppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<Tab>(Tab.DASHBOARD);
   const [isSessionActive, setIsSessionActive] = useState(false);
   const [entries, setEntries] = useState<JournalEntry[]>([]);
-  
+
   // Default Guest User State
   const [user, setUser] = useState<User>({
     id: 'guest',
@@ -63,115 +63,115 @@ const AppContent: React.FC = () => {
     if (session?.user) {
       const fetchData = async () => {
         try {
-            // A. Fetch Profile from DB (Source of Truth)
-            const { data: profileData, error: profileError } = await supabase
-              .from('profiles')
-              .select('*')
-              .eq('id', session.user.id)
-              .single();
+          // A. Fetch Profile from DB (Source of Truth)
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('*')
+            .eq('id', session.user.id)
+            .single();
 
-            // Fallback to Auth Metadata if DB profile missing (e.g. before SQL script was run)
-            const meta = session.user.user_metadata || {};
-            const firstName = profileData?.first_name || meta.firstName || 'User';
-            const lastName = profileData?.last_name || meta.lastName || '';
-            const tier = (profileData?.tier as UserTier) || meta.tier || UserTier.FREE;
-            const goal = (profileData?.goal as UserGoal) || meta.goal || UserGoal.JOURNAL;
+          // Fallback to Auth Metadata if DB profile missing (e.g. before SQL script was run)
+          const meta = session.user.user_metadata || {};
+          const firstName = profileData?.first_name || meta.firstName || 'User';
+          const lastName = profileData?.last_name || meta.lastName || '';
+          const tier = (profileData?.tier as UserTier) || meta.tier || UserTier.FREE;
+          const goal = (profileData?.goal as UserGoal) || meta.goal || UserGoal.JOURNAL;
 
-            // B. Fetch Entries from DB
-            const { data: entryData, error: entryError } = await supabase
+          // B. Fetch Entries from DB
+          const { data: entryData, error: entryError } = await supabase
             .from('entries')
             .select('*')
             .order('date', { ascending: false });
-            
-            if (entryError) console.error("Error fetching entries:", entryError);
 
-            let mappedEntries: JournalEntry[] = [];
-            let totalWords = 0;
-            let todayUsage = 0;
-            let streak = 0;
+          if (entryError) console.error("Error fetching entries:", entryError);
 
-            if (entryData) {
-              mappedEntries = entryData.map((e: any) => ({
-                  id: e.id,
-                  date: e.date,
-                  summary: e.summary,
-                  transcript: e.transcript,
-                  mood: e.mood as Mood,
-                  tags: e.tags || [],
-                  durationSeconds: e.duration_seconds || 0
-              }));
+          let mappedEntries: JournalEntry[] = [];
+          let totalWords = 0;
+          let todayUsage = 0;
+          let streak = 0;
 
-              // Calculate Stats
-              const now = new Date();
+          if (entryData) {
+            mappedEntries = entryData.map((e: any) => ({
+              id: e.id,
+              date: e.date,
+              summary: e.summary,
+              transcript: e.transcript,
+              mood: e.mood as Mood,
+              tags: e.tags || [],
+              durationSeconds: e.duration_seconds || 0
+            }));
 
-              // 1. Total Words
-              totalWords = mappedEntries.reduce((acc, entry) => {
-                  return acc + (entry.transcript ? entry.transcript.split(' ').length : 0);
-              }, 0);
+            // Calculate Stats
+            const now = new Date();
 
-              // 2. Today's Usage (Critical for Limits)
-              const todayDateString = now.toISOString().split('T')[0]; // YYYY-MM-DD format
-              todayUsage = mappedEntries.reduce((acc, entry) => {
-                  const entryDateString = new Date(entry.date).toISOString().split('T')[0];
-                  if (entryDateString === todayDateString) {
-                      return acc + (entry.durationSeconds || 0);
-                  }
-                  return acc;
-              }, 0);
+            // 1. Total Words
+            totalWords = mappedEntries.reduce((acc, entry) => {
+              return acc + (entry.transcript ? entry.transcript.split(' ').length : 0);
+            }, 0);
 
-              console.log('Today usage calculated:', todayUsage, 'seconds');
+            // 2. Today's Usage (Critical for Limits)
+            const todayDateString = now.toISOString().split('T')[0]; // YYYY-MM-DD format
+            todayUsage = mappedEntries.reduce((acc, entry) => {
+              const entryDateString = new Date(entry.date).toISOString().split('T')[0];
+              if (entryDateString === todayDateString) {
+                return acc + (entry.durationSeconds || 0);
+              }
+              return acc;
+            }, 0);
 
-              // 3. Streak Calculation (consecutive days with entries)
-              if (mappedEntries.length > 0) {
-                  // Get unique dates (YYYY-MM-DD format) sorted descending
-                  const uniqueDates = [...new Set(
-                    mappedEntries.map(e => new Date(e.date).toISOString().split('T')[0])
-                  )].sort().reverse();
+            console.log('Today usage calculated:', todayUsage, 'seconds');
 
-                  const today = now.toISOString().split('T')[0];
-                  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+            // 3. Streak Calculation (consecutive days with entries)
+            if (mappedEntries.length > 0) {
+              // Get unique dates (YYYY-MM-DD format) sorted descending
+              const uniqueDates = [...new Set(
+                mappedEntries.map(e => new Date(e.date).toISOString().split('T')[0])
+              )].sort().reverse();
 
-                  // Check if user has entry today or yesterday (streak still valid)
-                  if (uniqueDates[0] === today || uniqueDates[0] === yesterday) {
-                    streak = 1;
+              const today = now.toISOString().split('T')[0];
+              const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
 
-                    // Count consecutive days backwards
-                    for (let i = 1; i < uniqueDates.length; i++) {
-                      const currentDate = new Date(uniqueDates[i - 1]);
-                      const prevDate = new Date(uniqueDates[i]);
-                      const diffDays = Math.round((currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+              // Check if user has entry today or yesterday (streak still valid)
+              if (uniqueDates[0] === today || uniqueDates[0] === yesterday) {
+                streak = 1;
 
-                      if (diffDays === 1) {
-                        streak++;
-                      } else {
-                        break; // Streak broken
-                      }
-                    }
+                // Count consecutive days backwards
+                for (let i = 1; i < uniqueDates.length; i++) {
+                  const currentDate = new Date(uniqueDates[i - 1]);
+                  const prevDate = new Date(uniqueDates[i]);
+                  const diffDays = Math.round((currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+
+                  if (diffDays === 1) {
+                    streak++;
                   } else {
-                    streak = 0; // No recent entry, streak reset
+                    break; // Streak broken
                   }
+                }
+              } else {
+                streak = 0; // No recent entry, streak reset
               }
             }
+          }
 
-            setUser({
-              id: session.user.id,
-              email: session.user.email,
-              firstName,
-              lastName,
-              fullName: `${firstName} ${lastName}`.trim(),
-              tier,
-              goal,
-              streak, 
-              totalWords,
-              todayUsageSeconds: todayUsage
-            });
+          setUser({
+            id: session.user.id,
+            email: session.user.email,
+            firstName,
+            lastName,
+            fullName: `${firstName} ${lastName}`.trim(),
+            tier,
+            goal,
+            streak,
+            totalWords,
+            todayUsageSeconds: todayUsage
+          });
 
-            setEntries(mappedEntries);
+          setEntries(mappedEntries);
         } catch (err) {
-            console.error("Data fetch error:", err);
+          console.error("Data fetch error:", err);
         }
       };
-      
+
       fetchData();
     }
   }, [session, isSessionActive]); // Re-fetch when session status changes
@@ -186,7 +186,7 @@ const AppContent: React.FC = () => {
 
   const handleToggleTier = async () => {
     const newTier = user.tier === UserTier.FREE ? UserTier.PRO : UserTier.FREE;
-    
+
     // Update both Auth and DB Profile
     await supabase.auth.updateUser({ data: { tier: newTier } });
     await supabase.from('profiles').update({ tier: newTier }).eq('id', user.id);
@@ -215,7 +215,7 @@ const AppContent: React.FC = () => {
       ) : (
         <Layout activeTab={activeTab} onTabChange={setActiveTab} user={user}>
           {activeTab === Tab.DASHBOARD && (
-            <Dashboard user={user} onStartSession={handleStartSession} />
+            <Dashboard user={user} entries={entries} onStartSession={handleStartSession} />
           )}
           {activeTab === Tab.HISTORY && (
             <History entries={entries} user={user} />

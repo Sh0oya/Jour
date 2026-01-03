@@ -13,17 +13,8 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, user 
   return (
     <div className="flex flex-col h-screen max-w-md mx-auto bg-white shadow-2xl relative overflow-hidden">
       {/* Header */}
-      <div className="pt-8 pb-4 px-6 bg-mint-50 flex justify-between items-center z-10">
-        <div>
-          <h1 className="text-sm text-emerald-800/60 font-medium uppercase tracking-wider">Journaly</h1>
-          <p className="text-2xl font-semibold text-emerald-800">
-            {new Date().getHours() < 12 ? 'Good morning' : 'Good evening'}, {user.firstName}
-          </p>
-        </div>
-        <div className="w-10 h-10 rounded-full bg-emerald-800 flex items-center justify-center text-white font-bold">
-          {user.firstName.charAt(0)}
-        </div>
-      </div>
+      {/* Header Removed to avoid duplication with page headers */}
+      <div className="pt-4"></div>
 
       {/* Main Content Area */}
       <div className="flex-1 overflow-y-auto no-scrollbar bg-mint-50 pb-24 px-4 relative">
@@ -32,29 +23,29 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, user 
 
       {/* Bottom Navigation */}
       <div className="absolute bottom-0 left-0 right-0 bg-white border-t border-gray-100 px-6 py-4 flex justify-between items-center z-20 rounded-t-3xl shadow-[0_-5px_20px_rgba(0,0,0,0.03)]">
-        <NavButton 
-          icon={<Home size={24} />} 
-          label="Home" 
-          active={activeTab === Tab.DASHBOARD} 
-          onClick={() => onTabChange(Tab.DASHBOARD)} 
+        <NavButton
+          icon={<Home size={24} />}
+          label="Home"
+          active={activeTab === Tab.DASHBOARD}
+          onClick={() => onTabChange(Tab.DASHBOARD)}
         />
-        <NavButton 
-          icon={<History size={24} />} 
-          label="History" 
-          active={activeTab === Tab.HISTORY} 
-          onClick={() => onTabChange(Tab.HISTORY)} 
+        <NavButton
+          icon={<History size={24} />}
+          label="History"
+          active={activeTab === Tab.HISTORY}
+          onClick={() => onTabChange(Tab.HISTORY)}
         />
-        <NavButton 
-          icon={<BarChart2 size={24} />} 
-          label="Insight" 
-          active={activeTab === Tab.ANALYTICS} 
-          onClick={() => onTabChange(Tab.ANALYTICS)} 
+        <NavButton
+          icon={<BarChart2 size={24} />}
+          label="Insight"
+          active={activeTab === Tab.ANALYTICS}
+          onClick={() => onTabChange(Tab.ANALYTICS)}
         />
-        <NavButton 
-          icon={<Settings size={24} />} 
-          label="Settings" 
-          active={activeTab === Tab.SETTINGS} 
-          onClick={() => onTabChange(Tab.SETTINGS)} 
+        <NavButton
+          icon={<Settings size={24} />}
+          label="Settings"
+          active={activeTab === Tab.SETTINGS}
+          onClick={() => onTabChange(Tab.SETTINGS)}
         />
       </div>
     </div>
@@ -62,7 +53,7 @@ const Layout: React.FC<LayoutProps> = ({ children, activeTab, onTabChange, user 
 };
 
 const NavButton: React.FC<{ icon: React.ReactNode, label: string, active: boolean, onClick: () => void }> = ({ icon, label, active, onClick }) => (
-  <button 
+  <button
     onClick={onClick}
     className={`flex flex-col items-center gap-1 transition-all duration-300 ${active ? 'text-emerald-800 scale-105' : 'text-gray-400 hover:text-emerald-600'}`}
   >

@@ -1,13 +1,19 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { User, UserTier, UserGoal, AIPersonality } from '../types';
 import { useSettings, AVAILABLE_VOICES } from '../contexts/SettingsContext';
-import { Crown, Bell, Moon, LogOut, Check, Sparkles, Target, Mic, FileText, Download, Upload } from 'lucide-react';
+import { Crown, Bell, Moon, LogOut, Check, Sparkles, Target, Mic, Loader2 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
 interface SettingsProps {
   user: User;
   onToggleTier: () => void;
 }
+
+// RESTORED: Stripe Payment Links
+const STRIPE_LINKS = {
+  monthly: 'https://buy.stripe.com/3cI4gzb741RB0Whg8b7ok00',
+  yearly: 'https://buy.stripe.com/fZu28rejg67R9sNf477ok01',
+};
 
 const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
   const {
@@ -21,8 +27,18 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
     t
   } = useSettings();
 
+  const [loading, setLoading] = useState<string | null>(null);
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
+  };
+
+  const handleStripeCheckout = (plan: 'monthly' | 'yearly') => {
+    setLoading(plan);
+    const baseUrl = STRIPE_LINKS[plan];
+    // Pass user ID for webhook metadata
+    const checkoutUrl = `${baseUrl}?client_reference_id=${user.id}&prefilled_email=${encodeURIComponent(user.email)}`;
+    window.location.href = checkoutUrl;
   };
 
   const Personalities = [
@@ -55,12 +71,32 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
               {user.tier === UserTier.PRO ? t('pro') : t('free')}
             </div>
           </div>
-          <button
-            onClick={onToggleTier}
-            className="bg-white text-emerald-900 px-6 py-3 rounded-xl font-bold text-sm shadow-md active:scale-95 transition-transform"
-          >
-            {user.tier === UserTier.PRO ? 'Gérer abonnement' : t('upgrade')}
-          </button>
+
+          {user.tier === UserTier.PRO ? (
+            <button
+              onClick={() => window.location.href = 'https://billing.stripe.com/p/login/test_xxx'} // Replace with real portal if available
+              className="bg-white text-emerald-900 px-6 py-3 rounded-xl font-bold text-sm shadow-md active:scale-95 transition-transform"
+            >
+              Gérer abonnement
+            </button>
+          ) : (
+            <div className="flex gap-2">
+              <button
+                onClick={() => handleStripeCheckout('monthly')}
+                className="flex-1 bg-white text-emerald-900 px-4 py-3 rounded-xl font-bold text-xs shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2"
+              >
+                {loading === 'monthly' && <Loader2 size={12} className="animate-spin" />}
+                Mensuel (6.90€)
+              </button>
+              <button
+                onClick={() => handleStripeCheckout('yearly')}
+                className="flex-1 bg-emerald-400 text-emerald-950 px-4 py-3 rounded-xl font-bold text-xs shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2"
+              >
+                {loading === 'yearly' && <Loader2 size={12} className="animate-spin" />}
+                Annuel (70€)
+              </button>
+            </div>
+          )}
         </div>
 
         {/* Decorative Circle */}
@@ -154,8 +190,6 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
           {Intentions.map((g) => (
             <button
               key={g.id}
-              // Ideally this updates DB, for now purely visual/local if no handler passed
-              // ToDo: Implement Update Goal Logic
               className={`p-4 rounded-[1.5rem] flex items-center gap-3 transition-all ${user.goal === g.id
                   ? 'bg-emerald-800 text-white shadow-md'
                   : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50'
@@ -206,28 +240,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
         </div>
       </div>
 
-      {/* Data Section */}
-      <div className="space-y-4">
-        <p className="px-4 text-[10px] font-bold uppercase tracking-wider text-gray-400">{t('data_backup')}</p>
-        <div className="grid grid-cols-2 gap-3">
-          <button className="bg-gray-100 rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-gray-200 transition">
-            <Download size={20} className="text-gray-600" />
-            <span className="text-xs font-bold text-gray-700">{t('export_json')}</span>
-          </button>
-          <button className="bg-gray-100 rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-gray-200 transition">
-            <FileText size={20} className="text-gray-600" />
-            <span className="text-xs font-bold text-gray-700">{t('export_csv')}</span>
-          </button>
-        </div>
-        <button className="w-full bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl p-4 flex items-center justify-center gap-2 hover:bg-gray-100 transition">
-          <Upload size={16} className="text-gray-500" />
-          <span className="text-xs font-bold text-gray-500">{t('import_backup')}</span>
-        </button>
-
-        <p className="text-[10px] text-center text-gray-400 px-8 leading-relaxed">
-          L'import écrasera les données actuelles. Utilisez un fichier .json généré par Journaly.
-        </p>
-      </div>
+      {/* Export/Import REMOVED as per user feedback */}
 
       {/* Logout */}
       <button

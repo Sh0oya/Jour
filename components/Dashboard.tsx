@@ -1,22 +1,34 @@
-import React from 'react';
-import { User, Mood } from '../types';
+import React, { useMemo } from 'react';
+import { User, Mood, UserTier } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
-import { Mic, Lightbulb, Trophy, Coffee, Flame, Smile, Zap, Sparkles } from 'lucide-react';
-import { getTranslation } from '../lib/i18n';
+import { Mic, Lightbulb, Trophy, Coffee, Flame, Smile, Zap, Sparkles, Clock } from 'lucide-react';
 
 interface DashboardProps {
   user: User;
   onStartSession: () => void;
+  entries: any[]; // Using any[] for now to avoid strict typing issues with missing JournalEntry type import in this file context, though ideally should be JournalEntry
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ user, onStartSession }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, onStartSession, entries = [] }) => {
   const { settings, t } = useSettings();
+
+  // Limits configuration
+  const LIMITS = {
+    [UserTier.FREE]: 30, // 30 seconds
+    [UserTier.PRO]: 20 * 60 // 20 minutes
+  };
+
+  const dailyLimit = LIMITS[user.tier];
+  const remainingSeconds = Math.max(0, dailyLimit - (user.todayUsageSeconds || 0));
+  const usagePercent = Math.min(100, ((user.todayUsageSeconds || 0) / dailyLimit) * 100);
+
+  const isLimitReached = remainingSeconds <= 0;
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return "Bonjour";
-    if (hour < 18) return "Bonne après-midi";
-    return "Bonsoir";
+    if (hour < 12) return settings.language === 'fr' ? "Bonjour" : "Good morning";
+    if (hour < 18) return settings.language === 'fr' ? "Bonne après-midi" : "Good afternoon";
+    return settings.language === 'fr' ? "Bonsoir" : "Good evening";
   };
 
   const formatDate = () => {
@@ -27,8 +39,15 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartSession }) => {
     }).toUpperCase();
   };
 
+  const formatTime = (secs: number) => {
+    if (secs < 60) return `${secs}s`;
+    return `${Math.ceil(secs / 60)}m`;
+  };
+
+  const lastEntry = entries.length > 0 ? entries[0] : null;
+
   return (
-    <div className="space-y-8 pt-6 pb-24">
+    <div className="space-y-6 pt-6 pb-24">
 
       {/* Header */}
       <div className="px-2">
@@ -36,8 +55,33 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartSession }) => {
           {formatDate()}
         </p>
         <h1 className="text-3xl font-extrabold text-emerald-900 leading-tight">
-          {getGreeting()} {user.firstName || 'Invité'} !
+          {getGreeting()} {user.firstName || (settings.language === 'fr' ? 'Invité' : 'Guest')} !
         </h1>
+      </div>
+
+      {/* Usage Limit Bar (Restored) */}
+      <div className="bg-white px-5 py-4 rounded-[2rem] shadow-sm flex flex-col gap-2">
+        <div className="flex justify-between items-center text-xs font-bold uppercase tracking-wider text-gray-400">
+          <span className="flex items-center gap-1"><Clock size={12} /> {settings.language === 'fr' ? 'Temps Journalier' : 'Daily Allowance'}</span>
+          <span className={isLimitReached ? "text-red-500" : "text-emerald-600"}>
+            {formatTime(remainingSeconds)} {settings.language === 'fr' ? 'restants' : 'remaining'}
+          </span>
+        </div>
+        <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all duration-500 ${isLimitReached ? 'bg-red-400' : 'bg-emerald-500'}`}
+            style={{ width: `${usagePercent}%` }}
+          ></div>
+        </div>
+        {user.tier === UserTier.FREE ? (
+          <p className="text-[10px] text-center text-gray-400 mt-1">
+            Limit: 30s. <span className="text-emerald-600 font-bold">Passer PRO pour 20m.</span>
+          </p>
+        ) : (
+          <p className="text-[10px] text-center text-gray-400 mt-1">
+            PRO Plan : 20m/day.
+          </p>
+        )}
       </div>
 
       {/* Main Action Card */}
@@ -62,9 +106,10 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartSession }) => {
 
             <button
               onClick={onStartSession}
-              className="mt-2 bg-white text-emerald-900 px-8 py-4 rounded-full font-bold shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+              disabled={isLimitReached}
+              className={`mt-2 bg-white text-emerald-900 px-8 py-4 rounded-full font-bold shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center gap-2 ${isLimitReached ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {t('start_call')}
+              {isLimitReached ? (settings.language === 'fr' ? 'Limite Atteinte' : 'Limit Reached') : t('start_call')}
             </button>
           </div>
         </div>
@@ -74,7 +119,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartSession }) => {
       <div className="grid grid-cols-4 gap-3 px-1">
         {[
           { icon: <Lightbulb size={20} className="text-amber-500" />, label: t('idea') },
-          { icon: <Trophy size={20} className="text-purple-500" />, label: t('challenge') }, // 'Défi' in screenshot has swords, Trophy closer
+          { icon: <Trophy size={20} className="text-purple-500" />, label: t('challenge') },
           { icon: <Sparkles size={20} className="text-blue-500" />, label: t('victory') },
           { icon: <Coffee size={20} className="text-orange-500" />, label: t('calm') },
         ].map((action, i) => (
@@ -114,20 +159,24 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartSession }) => {
         </div>
 
         {/* Last Memory Widget - Full Width */}
-        <div className="col-span-2 bg-white p-6 rounded-[2.5rem] shadow-sm space-y-4">
-          <div className="flex items-center justify-between border-b border-gray-100 pb-4">
-            <h3 className="font-bold text-emerald-900">{t('last_memory')}</h3>
-            <span className="text-xs bg-gray-100 text-gray-500 px-3 py-1 rounded-full font-medium">samedi 29</span>
-          </div>
+        {lastEntry && (
+          <div className="col-span-2 bg-white p-6 rounded-[2.5rem] shadow-sm space-y-4">
+            <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+              <h3 className="font-bold text-emerald-900">{t('last_memory')}</h3>
+              <span className="text-xs bg-gray-100 text-gray-500 px-3 py-1 rounded-full font-medium">
+                {new Date(lastEntry.date).toLocaleDateString(settings.language === 'fr' ? 'fr-FR' : 'en-US', { day: 'numeric', month: 'short' })}
+              </span>
+            </div>
 
-          <p className="text-gray-600 text-sm leading-relaxed italic">
-            "Journée productive au travail, le projet Alpha avance bien. Un peu de stress lié aux délais, mais bonne séance de sport le soir pour décompresser."
-          </p>
+            <p className="text-gray-600 text-sm leading-relaxed italic line-clamp-3">
+              "{lastEntry.summary}"
+            </p>
 
-          <div className="flex justify-end">
-            <div className="text-2xl">😌</div>
+            <div className="flex justify-end">
+              <div className="text-2xl">{lastEntry.mood === Mood.GREAT ? '🤩' : lastEntry.mood === Mood.GOOD ? '🙂' : '😐'}</div>
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
