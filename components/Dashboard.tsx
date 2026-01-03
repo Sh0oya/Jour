@@ -142,9 +142,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartSession, entries = [
         {/* Mood Widget */}
         <div className="bg-white p-6 rounded-[2.5rem] shadow-sm flex flex-col items-center justify-between text-center gap-4">
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t('mood_today')}</span>
-          <div className="text-5xl drop-shadow-sm">😌</div>
+          <div className="text-5xl drop-shadow-sm">
+            {lastEntry ? (
+              lastEntry.mood === Mood.GREAT ? '🤩' :
+                lastEntry.mood === Mood.GOOD ? '🙂' :
+                  lastEntry.mood === Mood.BAD ? '😔' :
+                    lastEntry.mood === Mood.TERRIBLE ? '😫' : '😐'
+            ) : '😶'}
+          </div>
           <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
-            <span className="text-xs">😴</span>
+            {/* Sub-emotion or trend indicator could go here, keeping static sleep for now or removing if confusing */}
+            <span className="text-xs">{lastEntry ? '📈' : '💤'}</span>
           </div>
         </div>
 

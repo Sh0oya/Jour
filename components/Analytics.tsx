@@ -87,9 +87,15 @@ const Analytics: React.FC<AnalyticsProps> = ({ user, entries }) => {
   // 5. Top Tags
   const topTags = useMemo(() => {
     const counts: Record<string, number> = {};
-    entries.flatMap(e => e.tags || []).forEach(tag => {
-      counts[tag] = (counts[tag] || 0) + 1;
-    });
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    entries
+      .filter(e => new Date(e.date) >= thirtyDaysAgo)
+      .flatMap(e => e.tags || [])
+      .forEach(tag => {
+        counts[tag] = (counts[tag] || 0) + 1;
+      });
     return Object.entries(counts)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 8)

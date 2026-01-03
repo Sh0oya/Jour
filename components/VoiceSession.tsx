@@ -140,7 +140,10 @@ const VoiceSession: React.FC<VoiceSessionProps> = ({ user, onClose }) => {
     if (isSaving) return;
     await stop();
     setIsSaving(true);
-    setAnalyzingText(settings.language === 'fr' ? "Analyse..." : "Analyzing...");
+    setAnalyzingText(settings.language === 'fr' ? "Analyse en cours..." : "Analyzing...");
+
+    // Artificial wait to let the user feel the "thinking" process (and ensure audio buffer is fully flushed/processed)
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
     const finalDuration = Math.max(durationRef.current, duration, 1);
 
@@ -151,36 +154,32 @@ const VoiceSession: React.FC<VoiceSessionProps> = ({ user, onClose }) => {
       let tags: string[] = ["Vocal"];
 
       if (transcript && transcript.length > 10) {
+        setAnalyzingText(settings.language === 'fr' ? "Détection des émotions..." : "Detecting emotions...");
         try {
           const ai = new GoogleGenAI({ apiKey });
-          const prompt = settings.language === 'fr'
-            ? `Analyse cette conversation...` // Simplified prompt for brevity in this file
-            : `Analyze this conversation...`;
 
-          // Note: Keeping the robust prompt logic from previous version is computed below
-          // Enhanced Prompt for Action Items & Better Mood Detection
           const jsonPrompt = `
-                Analyse la conversation suivante entre l'utilisateur et June (l'IA).
-                
-                Objectifs:
-                1. Résumé: 2 phrases max, concises.
-                2. Mood: Déduis l'humeur EXACTE de l'utilisateur parmi [GREAT, GOOD, NEUTRAL, BAD, TERRIBLE]. Analyse le ton, les mots choisis et le contexte. Ne sois pas neutre par défaut ! Si l'utilisateur semble juste un peu positif, mets GOOD. S'il est très enthousiaste, GREAT. S'il est fatigué/triste, BAD ou TERRIBLE.
-                3. Tags: 3 à 5 mots-clés pertinents (thèmes abordés).
-                4. Action Items: Extrais les "promesses", "tâches" ou "choses à faire" que l'utilisateur a mentionné vouloir faire. (Ex: "Je dois appeler Maman", "Fini ce projet demain"). Si rien, tableau vide.
+            Analyse la conversation suivante entre l'utilisateur et June (l'IA).
+            
+            Objectifs:
+            1. Résumé: 2 phrases max, concises.
+            2. Mood: Déduis l'humeur EXACTE de l'utilisateur parmi [GREAT, GOOD, NEUTRAL, BAD, TERRIBLE]. Analyse le ton, les mots choisis et le contexte. Ne sois pas neutre par défaut ! Si l'utilisateur semble juste un peu positif, mets GOOD. S'il est très enthousiaste, GREAT. S'il est fatigué/triste, BAD ou TERRIBLE.
+            3. Tags: 3 à 5 mots-clés pertinents (thèmes abordés).
+            4. Action Items: Extrais les "promesses", "tâches" ou "choses à faire" que l'utilisateur a mentionné vouloir faire. (Ex: "Je dois appeler Maman", "Fini ce projet demain"). Si rien, tableau vide.
 
-                Retourne UNIQUEMENT un JSON valide :
-                {
-                    "summary": "...",
-                    "mood": "...",
-                    "tags": ["..."],
-                    "actionItems": [
-                        { "id": "uuid-genere-ici", "text": "Intitulé court de l'action", "completed": false }
-                    ]
-                }
-                
-                Conversation:
-                ${transcript}
-            `;
+            Retourne UNIQUEMENT un JSON valide :
+            {
+                "summary": "...",
+                "mood": "...",
+                "tags": ["..."],
+                "actionItems": [
+                    { "id": "uuid-genere-ici", "text": "Intitulé court de l'action", "completed": false }
+                ]
+            }
+            
+            Conversation:
+            ${transcript}
+          `;
 
           const response = await ai.models.generateContent({
             model: 'gemini-2.0-flash',
@@ -271,7 +270,7 @@ const VoiceSession: React.FC<VoiceSessionProps> = ({ user, onClose }) => {
   const formatTime = (secs: number) => {
     const m = Math.floor(secs / 60);
     const s = secs % 60;
-    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')} `;
   };
 
   // UI Render (Simplified for brevity, ensuring visual consistency)
@@ -298,7 +297,7 @@ const VoiceSession: React.FC<VoiceSessionProps> = ({ user, onClose }) => {
     <div className="absolute inset-0 z-50 bg-gradient-to-b from-emerald-800 to-emerald-900 text-white flex flex-col">
       <div className="p-6 flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
+          <div className={`w - 2 h - 2 rounded - full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'} `}></div>
           <span className="text-sm font-medium opacity-80">{isConnected ? (settings.language === 'fr' ? 'En direct' : 'Live') : 'Connexion...'}</span>
         </div>
         <button onClick={() => handleStopAndSave()} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition">
@@ -313,11 +312,11 @@ const VoiceSession: React.FC<VoiceSessionProps> = ({ user, onClose }) => {
         ></div>
 
         <div className="relative z-10 w-48 h-48 rounded-full bg-gradient-to-tr from-emerald-600 to-mint-200 shadow-2xl flex items-center justify-center transition-transform duration-100 overflow-hidden">
-          <div className={`absolute inset-0 bg-white/20 ${isSpeaking && settings.voiceResponse ? 'animate-pulse' : ''}`}></div>
+          <div className={`absolute inset - 0 bg - white / 20 ${isSpeaking && settings.voiceResponse ? 'animate-pulse' : ''} `}></div>
           {isSpeaking && settings.voiceResponse ? (
             <div className="flex gap-1 items-center h-12">
               {[1, 2, 3, 4, 5].map(i => (
-                <div key={i} className="w-2 bg-emerald-900 rounded-full animate-bounce" style={{ height: `${20 + Math.random() * 40}px`, animationDelay: `${i * 0.1}s` }}></div>
+                <div key={i} className="w-2 bg-emerald-900 rounded-full animate-bounce" style={{ height: `${20 + Math.random() * 40} px`, animationDelay: `${i * 0.1} s` }}></div>
               ))}
             </div>
           ) : (
