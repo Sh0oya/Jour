@@ -1,0 +1,1 @@
+ALTER TABLE entries ADD COLUMN IF NOT EXISTS action_items JSONB DEFAULT '[]'::JSONB;

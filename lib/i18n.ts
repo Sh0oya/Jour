@@ -25,6 +25,9 @@ export const translations = {
     mood_today: "Humeur",
     themes: "Thèmes",
     last_memory: "Dernier souvenir",
+    action_items: "Suivi d'actions",
+    mood_distribution: "Répartition Humeur",
+    top_tags: "Top Thèmes",
     
     // Settings
     settings: "Réglages",
@@ -92,6 +95,9 @@ export const translations = {
     mood_today: "Mood",
     themes: "Themes",
     last_memory: "Last Memory",
+    action_items: "Action Items",
+    mood_distribution: "Mood Distribution",
+    top_tags: "Top Themes",
 
     // Settings
     settings: "Settings",

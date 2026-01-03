@@ -48,7 +48,8 @@ export interface JournalEntry {
   transcript: string;
   mood: Mood;
   tags: string[];
-  durationSeconds: number;
+  durationSeconds?: number;
+  actionItems?: { id: string, text: string, completed: boolean }[];
 }
 
 export interface AudioVisualizerState {

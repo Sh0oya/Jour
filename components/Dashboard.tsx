@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { User, Mood, UserTier } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
-import { Mic, Lightbulb, Trophy, Coffee, Flame, Smile, Zap, Sparkles, Clock } from 'lucide-react';
+import { Mic, Lightbulb, Trophy, Coffee, Flame, Smile, Zap, Sparkles, Clock, CheckSquare } from 'lucide-react';
 
 interface DashboardProps {
   user: User;
@@ -152,11 +152,17 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartSession, entries = [
         <div className="bg-white p-6 rounded-[2.5rem] shadow-sm flex flex-col justify-between gap-4">
           <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t('themes')}</span>
           <div className="flex flex-wrap gap-2 content-start">
-            <span className="bg-emerald-50 text-emerald-800 text-[10px] font-bold px-3 py-1.5 rounded-full">Avancée</span>
-            <span className="bg-emerald-50 text-emerald-800 text-[10px] font-bold px-3 py-1.5 rounded-full">Projet</span>
-            <span className="bg-emerald-50 text-emerald-800 text-[10px] font-bold px-3 py-1.5 rounded-full">Alpha</span>
+            {entries.slice(0, 5).flatMap(e => e.tags || []).slice(0, 5).map((tag, i) => (
+              <span key={i} className="bg-emerald-50 text-emerald-800 text-[10px] font-bold px-3 py-1.5 rounded-full">{tag}</span>
+            ))}
+            {entries.flatMap(e => e.tags || []).length === 0 && (
+              <span className="text-gray-300 text-xs italic">Pas encore de tags</span>
+            )}
           </div>
         </div>
+
+        {/* Action Items Widget - New Feature */}
+        <ActionItemsWidget entries={entries} />
 
         {/* Last Memory Widget - Full Width */}
         {lastEntry && (
@@ -177,6 +183,83 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartSession, entries = [
             </div>
           </div>
         )}
+      </div>
+    </div>
+  );
+};
+
+
+const ActionItemsWidget: React.FC<{ entries: any[] }> = ({ entries }) => {
+  const { t, settings } = useSettings();
+  const [items, setItems] = React.useState<any[]>([]);
+
+  // Consolidate recent uncompleted action items
+  React.useEffect(() => {
+    const allItems: any[] = [];
+    entries.forEach(entry => {
+      if (entry.action_items && Array.isArray(entry.action_items)) {
+        entry.action_items.forEach((item: any) => {
+          if (!item.completed) {
+            allItems.push({ ...item, entryId: entry.id });
+          }
+        });
+      }
+      // Handle camelCase if coming from types
+      if (entry.actionItems && Array.isArray(entry.actionItems)) {
+        entry.actionItems.forEach((item: any) => {
+          if (!item.completed) {
+            allItems.push({ ...item, entryId: entry.id });
+          }
+        });
+      }
+    });
+    // Take top 3 most recent
+    setItems(allItems.slice(0, 3));
+  }, [entries]);
+
+  const toggleItem = async (itemId: string, entryId: string) => {
+    // Optimistic update
+    setItems(prev => prev.filter(i => i.id !== itemId));
+
+    // Find entry and update DB
+    const entry = entries.find(e => e.id === entryId);
+    if (entry) {
+      const actionItems = entry.action_items || entry.actionItems || [];
+      const updatedItems = actionItems.map((i: any) =>
+        i.id === itemId ? { ...i, completed: true } : i
+      );
+
+      const { supabase } = await import('../lib/supabase');
+      const { error } = await supabase
+        .from('entries')
+        .update({ action_items: updatedItems })
+        .eq('id', entryId);
+
+      if (error) console.error("Failed to toggle item", error);
+    }
+  };
+
+  if (items.length === 0) return null;
+
+  return (
+    <div className="col-span-2 bg-emerald-50 p-6 rounded-[2.5rem] shadow-sm flex flex-col gap-4">
+      <div className="flex items-center gap-2 text-emerald-900 border-b border-emerald-100 pb-2">
+        <CheckSquare size={16} />
+        <span className="text-xs font-bold uppercase tracking-widest">{settings.language === 'fr' ? 'Suivi d\'actions' : 'Action Items'}</span>
+      </div>
+      <div className="space-y-2">
+        {items.map(item => (
+          <button
+            key={item.id}
+            onClick={() => toggleItem(item.id, item.entryId)}
+            className="w-full flex items-center gap-3 bg-white p-3 rounded-xl shadow-sm hover:bg-emerald-100 transition group text-left"
+          >
+            <div className="w-5 h-5 rounded-full border-2 border-emerald-200 flex items-center justify-center group-hover:bg-emerald-500 group-hover:border-emerald-500 transition">
+              <CheckSquare size={10} className="text-white opacity-0 group-hover:opacity-100" />
+            </div>
+            <span className="text-sm text-emerald-900 font-medium line-clamp-1">{item.text}</span>
+          </button>
+        ))}
       </div>
     </div>
   );
