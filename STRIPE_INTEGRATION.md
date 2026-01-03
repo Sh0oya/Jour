@@ -267,7 +267,7 @@ npx supabase secrets set STRIPE_SECRET_KEY=sk_live_XXXXXXX
 ## Étape 6 : Déployer l'Edge Function ⏳ À FAIRE
 
 ```bash
-export SUPABASE_ACCESS_TOKEN=sbp_3de3f4a3a7b77a807a47061e84a653b0bf9e3e15 && npx supabase functions deploy stripe-webhook
+cd 
 ```
 
 URL de la fonction :

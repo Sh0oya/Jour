@@ -102,7 +102,6 @@ const App: React.FC = () => {
 
               // Calculate Stats
               const now = new Date();
-              const todayString = now.toDateString();
 
               // 1. Total Words
               totalWords = mappedEntries.reduce((acc, entry) => {
@@ -110,21 +109,46 @@ const App: React.FC = () => {
               }, 0);
 
               // 2. Today's Usage (Critical for Limits)
+              const todayDateString = now.toISOString().split('T')[0]; // YYYY-MM-DD format
               todayUsage = mappedEntries.reduce((acc, entry) => {
-                  const entryDate = new Date(entry.date);
-                  if (entryDate.toDateString() === todayString) {
+                  const entryDateString = new Date(entry.date).toISOString().split('T')[0];
+                  if (entryDateString === todayDateString) {
                       return acc + (entry.durationSeconds || 0);
                   }
                   return acc;
               }, 0);
 
-              // 3. Streak Calculation
+              console.log('Today usage calculated:', todayUsage, 'seconds');
+
+              // 3. Streak Calculation (consecutive days with entries)
               if (mappedEntries.length > 0) {
-                  streak = 1;
-                  const lastEntryDate = new Date(mappedEntries[0].date);
-                  const diffTime = Math.abs(now.getTime() - lastEntryDate.getTime());
-                  const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)); 
-                  if (diffDays <= 2) streak = mappedEntries.length > 5 ? 5 : mappedEntries.length; 
+                  // Get unique dates (YYYY-MM-DD format) sorted descending
+                  const uniqueDates = [...new Set(
+                    mappedEntries.map(e => new Date(e.date).toISOString().split('T')[0])
+                  )].sort().reverse();
+
+                  const today = now.toISOString().split('T')[0];
+                  const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+                  // Check if user has entry today or yesterday (streak still valid)
+                  if (uniqueDates[0] === today || uniqueDates[0] === yesterday) {
+                    streak = 1;
+
+                    // Count consecutive days backwards
+                    for (let i = 1; i < uniqueDates.length; i++) {
+                      const currentDate = new Date(uniqueDates[i - 1]);
+                      const prevDate = new Date(uniqueDates[i]);
+                      const diffDays = Math.round((currentDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24));
+
+                      if (diffDays === 1) {
+                        streak++;
+                      } else {
+                        break; // Streak broken
+                      }
+                    }
+                  } else {
+                    streak = 0; // No recent entry, streak reset
+                  }
               }
             }
 
