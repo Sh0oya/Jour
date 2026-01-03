@@ -27,8 +27,8 @@ const VoiceSession: React.FC<VoiceSessionProps> = ({ user, onClose }) => {
   // The max duration for THIS specific session is (Daily Limit - Already Used Today)
   const maxSessionDuration = Math.max(0, dailyLimit - (user.todayUsageSeconds || 0));
 
-  // Hardcoded key for demo as per prompt instructions regarding process.env.API_KEY assumption
-  const apiKey = process.env.API_KEY || ''; 
+  // Gemini API Key from environment variable
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY || ''; 
 
   const { isConnected, isSpeaking, start, stop, currentVolume, error, getTranscript } = useGeminiLive({
     apiKey,
