@@ -61,7 +61,7 @@ export const Auth: React.FC = () => {
           <img
             src="https://www.ppc-digital.fr/wp-content/uploads/2025/12/Design-sans-titre-1-1.png"
             alt="Journaly Logo"
-            className="w-32 h-auto mx-auto mb-4 drop-shadow-sm"
+            className="w-48 h-auto mx-auto mb-6 drop-shadow-sm"
           />
           <p className="text-emerald-800/60">Your intelligent audio companion</p>
         </div>
