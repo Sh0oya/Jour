@@ -10,8 +10,9 @@ import DebugConsole from './components/DebugConsole';
 import { Tab, User, UserTier, UserGoal, JournalEntry, Mood } from './types';
 import { supabase } from './lib/supabase';
 import { Loader2 } from 'lucide-react';
+import { SettingsProvider } from './contexts/SettingsContext';
 
-const App: React.FC = () => {
+const AppContent: React.FC = () => {
   const [session, setSession] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<Tab>(Tab.DASHBOARD);
@@ -230,5 +231,11 @@ const App: React.FC = () => {
     </>
   );
 };
+
+const App: React.FC = () => (
+  <SettingsProvider>
+    <AppContent />
+  </SettingsProvider>
+);
 
 export default App;

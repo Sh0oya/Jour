@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { User, UserTier } from '../types';
-import { User as UserIcon, Moon, Bell, Shield, LogOut, Loader2, Target, Mail, ChevronRight, ExternalLink } from 'lucide-react';
+import { User as UserIcon, Moon, Bell, Shield, LogOut, Loader2, Target, Mail, ChevronRight, ExternalLink, Check } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { useSettings, AVAILABLE_VOICES } from '../contexts/SettingsContext';
 
 interface SettingsProps {
   user: User;
@@ -19,7 +20,9 @@ const STRIPE_PORTAL = 'https://billing.stripe.com/p/login/test_xxx'; // À confi
 
 const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
   const [loading, setLoading] = useState<string | null>(null);
-  const [showComingSoon, setShowComingSoon] = useState<string | null>(null);
+  const [showVoiceModal, setShowVoiceModal] = useState(false);
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const { settings, setDarkMode, setReminderEnabled, setReminderTime, setVoiceName } = useSettings();
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -30,11 +33,6 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
     const baseUrl = STRIPE_LINKS[plan];
     const checkoutUrl = `${baseUrl}?client_reference_id=${user.id}&prefilled_email=${encodeURIComponent(user.email)}`;
     window.location.href = checkoutUrl;
-  };
-
-  const handleComingSoon = (feature: string) => {
-    setShowComingSoon(feature);
-    setTimeout(() => setShowComingSoon(null), 2000);
   };
 
   return (
@@ -127,35 +125,119 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
 
        {/* Preferences */}
        <div className="bg-white rounded-[2.5rem] shadow-sm overflow-hidden">
-          <SettingItem
-            icon={<Moon size={20} />}
-            label="Mode sombre"
-            value="Bientôt"
-            onClick={() => handleComingSoon('dark')}
-          />
-          <SettingItem
-            icon={<Bell size={20} />}
-            label="Rappel quotidien"
-            value="Bientôt"
-            onClick={() => handleComingSoon('reminder')}
-          />
+          {/* Dark Mode Toggle */}
+          <div className="flex items-center justify-between p-5 border-b border-gray-50">
+             <div className="flex items-center gap-3 text-emerald-900">
+                <div className="text-emerald-600"><Moon size={20} /></div>
+                <span className="font-medium text-sm">Mode sombre</span>
+             </div>
+             <button
+               onClick={() => setDarkMode(!settings.darkMode)}
+               className={`w-12 h-7 rounded-full transition-colors ${settings.darkMode ? 'bg-emerald-600' : 'bg-gray-300'}`}
+             >
+               <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform mx-1 ${settings.darkMode ? 'translate-x-5' : 'translate-x-0'}`} />
+             </button>
+          </div>
+
+          {/* Reminder Toggle */}
+          <div className="flex items-center justify-between p-5 border-b border-gray-50">
+             <div className="flex items-center gap-3 text-emerald-900">
+                <div className="text-emerald-600"><Bell size={20} /></div>
+                <div>
+                  <span className="font-medium text-sm block">Rappel quotidien</span>
+                  {settings.reminderEnabled && (
+                    <span className="text-xs text-gray-400">À {settings.reminderTime}</span>
+                  )}
+                </div>
+             </div>
+             <div className="flex items-center gap-2">
+               {settings.reminderEnabled && (
+                 <button
+                   onClick={() => setShowReminderModal(true)}
+                   className="text-xs text-emerald-600 font-medium"
+                 >
+                   Modifier
+                 </button>
+               )}
+               <button
+                 onClick={() => setReminderEnabled(!settings.reminderEnabled)}
+                 className={`w-12 h-7 rounded-full transition-colors ${settings.reminderEnabled ? 'bg-emerald-600' : 'bg-gray-300'}`}
+               >
+                 <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform mx-1 ${settings.reminderEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+               </button>
+             </div>
+          </div>
+
+          {/* Voice Selection */}
           <SettingItem
             icon={<UserIcon size={20} />}
             label="Voix de June"
-            value="Kore"
-            onClick={() => handleComingSoon('voice')}
+            value={AVAILABLE_VOICES.find(v => v.id === settings.voiceName)?.name || 'Puck'}
+            onClick={() => setShowVoiceModal(true)}
           />
+
+          {/* Privacy */}
           <SettingItem
             icon={<Shield size={20} />}
             label="Confidentialité"
-            onClick={() => handleComingSoon('privacy')}
+            value="Voir"
+            onClick={() => window.open('https://journaly.app/privacy', '_blank')}
           />
        </div>
 
-       {/* Coming Soon Toast */}
-       {showComingSoon && (
-         <div className="fixed bottom-24 left-4 right-4 bg-emerald-800 text-white p-4 rounded-2xl text-center text-sm font-medium shadow-lg animate-pulse">
-           Bientôt disponible !
+       {/* Voice Selection Modal */}
+       {showVoiceModal && (
+         <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => setShowVoiceModal(false)}>
+           <div className="bg-white w-full max-w-md rounded-t-3xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
+             <h3 className="text-lg font-bold text-emerald-900">Choisir la voix de June</h3>
+             <div className="space-y-2">
+               {AVAILABLE_VOICES.map(voice => (
+                 <button
+                   key={voice.id}
+                   onClick={() => {
+                     setVoiceName(voice.id);
+                     setShowVoiceModal(false);
+                   }}
+                   className={`w-full flex items-center justify-between p-4 rounded-xl transition ${
+                     settings.voiceName === voice.id ? 'bg-emerald-100 border-2 border-emerald-500' : 'bg-gray-50 hover:bg-gray-100'
+                   }`}
+                 >
+                   <div>
+                     <span className="font-medium text-emerald-900">{voice.name}</span>
+                     <p className="text-xs text-gray-500">{voice.description}</p>
+                   </div>
+                   {settings.voiceName === voice.id && <Check size={20} className="text-emerald-600" />}
+                 </button>
+               ))}
+             </div>
+             <button
+               onClick={() => setShowVoiceModal(false)}
+               className="w-full py-3 text-gray-500 font-medium"
+             >
+               Annuler
+             </button>
+           </div>
+         </div>
+       )}
+
+       {/* Reminder Time Modal */}
+       {showReminderModal && (
+         <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => setShowReminderModal(false)}>
+           <div className="bg-white w-full max-w-md rounded-t-3xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
+             <h3 className="text-lg font-bold text-emerald-900">Heure du rappel</h3>
+             <input
+               type="time"
+               value={settings.reminderTime}
+               onChange={(e) => setReminderTime(e.target.value)}
+               className="w-full p-4 text-2xl text-center border border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none"
+             />
+             <button
+               onClick={() => setShowReminderModal(false)}
+               className="w-full py-3 bg-emerald-600 text-white font-medium rounded-xl"
+             >
+               Enregistrer
+             </button>
+           </div>
          </div>
        )}
 

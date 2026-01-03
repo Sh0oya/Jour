@@ -13,6 +13,44 @@ body {
   font-family: 'Inter', sans-serif;
   background-color: #EAF2F0;
   color: #1F2937;
+  transition: background-color 0.3s, color 0.3s;
+}
+
+/* Dark Mode */
+.dark body,
+html.dark body {
+  background-color: #1a1a2e;
+  color: #e5e5e5;
+}
+
+html.dark .bg-white {
+  background-color: #16213e !important;
+}
+
+html.dark .bg-mint-50,
+html.dark .bg-mint-100 {
+  background-color: #1a1a2e !important;
+}
+
+html.dark .text-emerald-900 {
+  color: #5eead4 !important;
+}
+
+html.dark .text-emerald-800 {
+  color: #5eead4 !important;
+}
+
+html.dark .text-gray-500,
+html.dark .text-gray-400 {
+  color: #9ca3af !important;
+}
+
+html.dark .border-gray-50 {
+  border-color: #374151 !important;
+}
+
+html.dark .shadow-sm {
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.3) !important;
 }
 
 /* Custom scrollbar for webkit */

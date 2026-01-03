@@ -30,13 +30,17 @@ const VoiceSession: React.FC<VoiceSessionProps> = ({ user, onClose }) => {
   // Gemini API Key from environment variable
   const apiKey = import.meta.env.VITE_GEMINI_API_KEY || ''; 
 
+  // Get saved voice preference or default to Puck
+  const savedVoice = localStorage.getItem('juneVoice') || 'Puck';
+
   const { isConnected, isSpeaking, start, stop, currentVolume, error, getTranscript } = useGeminiLive({
     apiKey,
     systemInstruction: "Tu es June, une compagne de journal intime chaleureuse, empathique et curieuse. Pose des questions ouvertes et concises pour aider l'utilisateur à réfléchir sur sa journée. Garde tes réponses brèves pour laisser l'utilisateur parler davantage. Ton: Serein, Intime, Bienveillant. Parle toujours en français.",
-    voiceName: 'Kore'
+    voiceName: savedVoice
   });
 
   const durationInterval = useRef<any>(undefined);
+  const durationRef = useRef<number>(0); // Track actual duration for saving
 
   const [limitReached, setLimitReached] = useState(false);
 
@@ -74,12 +78,13 @@ const VoiceSession: React.FC<VoiceSessionProps> = ({ user, onClose }) => {
       durationInterval.current = setInterval(() => {
         setDuration(prev => {
            const newDuration = prev + 1;
-           
+           durationRef.current = newDuration; // Keep ref in sync
+
            // CRITICAL: Check against calculated remaining time, not just static 30s
            if (newDuration >= maxSessionDuration) {
                // We must stop inside the interval to be precise
                clearInterval(durationInterval.current);
-               handleStopAndSave(); 
+               handleStopAndSave();
            }
            return newDuration;
         });
@@ -93,11 +98,14 @@ const VoiceSession: React.FC<VoiceSessionProps> = ({ user, onClose }) => {
   const handleStopAndSave = async () => {
     // Prevent double save if called multiple times
     if (isSaving) return;
-    
+
     // 1. Stop audio session
     await stop();
     setIsSaving(true);
     setAnalyzingText("Analyse de ta journée...");
+
+    // Use ref for accurate duration (state might be stale)
+    const finalDuration = Math.max(durationRef.current, duration, 1);
 
     try {
       // 2. Get accumulated transcript
@@ -155,14 +163,15 @@ const VoiceSession: React.FC<VoiceSessionProps> = ({ user, onClose }) => {
       setAnalyzingText("Sauvegarde dans le cloud...");
 
       // 4. Save to Supabase
+      console.log('Saving entry with duration:', finalDuration, 'seconds');
       const { error } = await supabase.from('entries').insert({
         user_id: user.id,
         date: new Date().toISOString(),
-        summary: summary, 
-        transcript: transcript || "(No transcript available)", 
+        summary: summary,
+        transcript: transcript || "(No transcript available)",
         mood: mood,
         tags: tags,
-        duration_seconds: duration,
+        duration_seconds: finalDuration,
       });
       
       // UPDATE: We should theoretically update the profile's today_usage_seconds here too, 
