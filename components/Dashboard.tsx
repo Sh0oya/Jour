@@ -1,12 +1,12 @@
 import React, { useMemo } from 'react';
-import { User, Mood, UserTier } from '../types';
+import { User, Mood, UserTier, JournalEntry } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
 import { Mic, Lightbulb, Trophy, Coffee, Flame, Smile, Zap, Sparkles, Clock, CheckSquare } from 'lucide-react';
 
 interface DashboardProps {
   user: User;
   onStartSession: () => void;
-  entries: any[]; // Using any[] for now to avoid strict typing issues with missing JournalEntry type import in this file context, though ideally should be JournalEntry
+  entries: JournalEntry[];
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, onStartSession, entries = [] }) => {
@@ -189,7 +189,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartSession, entries = [
 };
 
 
-const ActionItemsWidget: React.FC<{ entries: any[] }> = ({ entries }) => {
+const ActionItemsWidget: React.FC<{ entries: JournalEntry[] }> = ({ entries }) => {
   const { t, settings } = useSettings();
   const [items, setItems] = React.useState<any[]>([]);
 
@@ -197,14 +197,15 @@ const ActionItemsWidget: React.FC<{ entries: any[] }> = ({ entries }) => {
   React.useEffect(() => {
     const allItems: any[] = [];
     entries.forEach(entry => {
-      if (entry.action_items && Array.isArray(entry.action_items)) {
-        entry.action_items.forEach((item: any) => {
+      // Fallback for snake_case from DB
+      if ((entry as any).action_items && Array.isArray((entry as any).action_items)) {
+        (entry as any).action_items.forEach((item: any) => {
           if (!item.completed) {
             allItems.push({ ...item, entryId: entry.id });
           }
         });
       }
-      // Handle camelCase if coming from types
+      // Handle camelCase from types
       if (entry.actionItems && Array.isArray(entry.actionItems)) {
         entry.actionItems.forEach((item: any) => {
           if (!item.completed) {
