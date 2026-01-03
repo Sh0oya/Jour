@@ -11,6 +11,15 @@ export enum UserGoal {
   OTHER = 'Autre'
 }
 
+export type Language = 'fr' | 'en';
+
+export enum AIPersonality {
+  EMPATHETIC = 'EMPATHETIC', // Douce et à l'écoute
+  COACH = 'COACH',           // Motivante & Dynamique
+  DIRECT = 'DIRECT',         // Carrée & Efficace
+  CUSTOM = 'CUSTOM'          // Vos propres règles
+}
+
 export interface User {
   id: string;
   email: string;

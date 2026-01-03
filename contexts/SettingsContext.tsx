@@ -1,10 +1,15 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { Language, AIPersonality } from '../types';
+import { getTranslation, TranslationKey } from '../lib/i18n';
 
 interface Settings {
   darkMode: boolean;
   reminderEnabled: boolean;
   reminderTime: string; // Format: "HH:MM"
   voiceName: string;
+  language: Language;
+  voiceResponse: boolean; // Toggle for AI speaking back
+  personality: AIPersonality;
 }
 
 interface SettingsContextType {
@@ -13,6 +18,10 @@ interface SettingsContextType {
   setReminderEnabled: (enabled: boolean) => void;
   setReminderTime: (time: string) => void;
   setVoiceName: (voice: string) => void;
+  setLanguage: (lang: Language) => void;
+  setVoiceResponse: (enabled: boolean) => void;
+  setPersonality: (p: AIPersonality) => void;
+  t: (key: TranslationKey) => string; // Helper for translation
 }
 
 const defaultSettings: Settings = {
@@ -20,6 +29,9 @@ const defaultSettings: Settings = {
   reminderEnabled: false,
   reminderTime: '20:00',
   voiceName: 'Puck',
+  language: 'fr',
+  voiceResponse: true,
+  personality: AIPersonality.EMPATHETIC,
 };
 
 const SettingsContext = createContext<SettingsContextType | undefined>(undefined);
@@ -30,7 +42,9 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     const saved = localStorage.getItem('journalySettings');
     if (saved) {
       try {
-        return { ...defaultSettings, ...JSON.parse(saved) };
+        const parsed = JSON.parse(saved);
+        // Merge with default to ensure new keys exist if loading old settings
+        return { ...defaultSettings, ...parsed };
       } catch {
         return defaultSettings;
       }
@@ -55,27 +69,21 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
   useEffect(() => {
     if (!settings.reminderEnabled) return;
 
-    // Request notification permission
-    if ('Notification' in window && Notification.permission === 'default') {
-      Notification.requestPermission();
-    }
-
     // Check every minute if it's reminder time
     const checkReminder = () => {
       const now = new Date();
       const currentTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
 
       if (currentTime === settings.reminderTime) {
-        // Check if we already sent a reminder today
         const lastReminder = localStorage.getItem('lastReminderDate');
         const today = now.toDateString();
 
         if (lastReminder !== today) {
-          // Send notification
           if ('Notification' in window && Notification.permission === 'granted') {
-            new Notification('Journaly - Rappel', {
-              body: 'C\'est l\'heure de ton journal ! Prends un moment pour réfléchir à ta journée.',
-              icon: 'https://www.ppc-digital.fr/wp-content/uploads/2026/01/Design-sans-titre-28.png',
+            new Notification('Journaly', {
+              body: settings.language === 'fr'
+                ? 'C\'est l\'heure de ton journal !'
+                : 'It\'s time for your journal!',
             });
           }
           localStorage.setItem('lastReminderDate', today);
@@ -83,27 +91,21 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       }
     };
 
-    const interval = setInterval(checkReminder, 60000); // Check every minute
-    checkReminder(); // Check immediately
+    const interval = setInterval(checkReminder, 60000);
+    checkReminder();
 
     return () => clearInterval(interval);
-  }, [settings.reminderEnabled, settings.reminderTime]);
+  }, [settings.reminderEnabled, settings.reminderTime, settings.language]);
 
-  const setDarkMode = (enabled: boolean) => {
-    setSettings(prev => ({ ...prev, darkMode: enabled }));
-  };
+  const setDarkMode = (enabled: boolean) => setSettings(prev => ({ ...prev, darkMode: enabled }));
+  const setReminderEnabled = (enabled: boolean) => setSettings(prev => ({ ...prev, reminderEnabled: enabled }));
+  const setReminderTime = (time: string) => setSettings(prev => ({ ...prev, reminderTime: time }));
+  const setVoiceName = (voice: string) => setSettings(prev => ({ ...prev, voiceName: voice }));
+  const setLanguage = (lang: Language) => setSettings(prev => ({ ...prev, language: lang }));
+  const setVoiceResponse = (enabled: boolean) => setSettings(prev => ({ ...prev, voiceResponse: enabled }));
+  const setPersonality = (p: AIPersonality) => setSettings(prev => ({ ...prev, personality: p }));
 
-  const setReminderEnabled = (enabled: boolean) => {
-    setSettings(prev => ({ ...prev, reminderEnabled: enabled }));
-  };
-
-  const setReminderTime = (time: string) => {
-    setSettings(prev => ({ ...prev, reminderTime: time }));
-  };
-
-  const setVoiceName = (voice: string) => {
-    setSettings(prev => ({ ...prev, voiceName: voice }));
-  };
+  const t = (key: TranslationKey) => getTranslation(settings.language, key);
 
   return (
     <SettingsContext.Provider value={{
@@ -112,6 +114,10 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
       setReminderEnabled,
       setReminderTime,
       setVoiceName,
+      setLanguage,
+      setVoiceResponse,
+      setPersonality,
+      t
     }}>
       {children}
     </SettingsContext.Provider>
@@ -126,11 +132,12 @@ export const useSettings = () => {
   return context;
 };
 
-// Available voices for Gemini
+// Available voices
 export const AVAILABLE_VOICES = [
-  { id: 'Puck', name: 'Puck', description: 'Calme et posée' },
-  { id: 'Charon', name: 'Charon', description: 'Grave et réfléchie' },
-  { id: 'Kore', name: 'Kore', description: 'Douce et chaleureuse' },
-  { id: 'Fenrir', name: 'Fenrir', description: 'Énergique' },
-  { id: 'Aoede', name: 'Aoede', description: 'Mélodieuse' },
+  { id: 'Kore', name: 'Douce (Kore)', description: 'Joueuse' },
+  { id: 'Puck', name: 'Énergique (Puck)', description: 'Vif' },
+  { id: 'Fenrir', name: 'Profonde (Fenrir)', description: 'Grave' },
+  { id: 'Charon', name: 'Calme (Charon)', description: 'Posée' },
+  { id: 'Aoede', name: 'Distinguée (Aoede)', description: 'Noble' },
 ];
+

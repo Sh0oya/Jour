@@ -1,274 +1,243 @@
-import React, { useState } from 'react';
-import { User, UserTier } from '../types';
-import { User as UserIcon, Moon, Bell, Shield, LogOut, Loader2, Target, Mail, ChevronRight, ExternalLink, Check } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import React from 'react';
+import { User, UserTier, UserGoal, AIPersonality } from '../types';
 import { useSettings, AVAILABLE_VOICES } from '../contexts/SettingsContext';
+import { Crown, Bell, Moon, LogOut, Check, Sparkles, Target, Mic, FileText, Download, Upload } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 interface SettingsProps {
   user: User;
   onToggleTier: () => void;
 }
 
-// Stripe Payment Links
-const STRIPE_LINKS = {
-  monthly: 'https://buy.stripe.com/3cI4gzb741RB0Whg8b7ok00',
-  yearly: 'https://buy.stripe.com/fZu28rejg67R9sNf477ok01',
-};
-
-// Stripe Customer Portal (pour gérer l'abonnement)
-const STRIPE_PORTAL = 'https://billing.stripe.com/p/login/test_xxx'; // À configurer
-
 const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
-  const [loading, setLoading] = useState<string | null>(null);
-  const [showVoiceModal, setShowVoiceModal] = useState(false);
-  const [showReminderModal, setShowReminderModal] = useState(false);
-  const { settings, setDarkMode, setReminderEnabled, setReminderTime, setVoiceName } = useSettings();
+  const {
+    settings,
+    setDarkMode,
+    setReminderEnabled,
+    setReminderTime,
+    setVoiceName,
+    setVoiceResponse,
+    setPersonality,
+    t
+  } = useSettings();
 
-  const handleSignOut = async () => {
+  const handleLogout = async () => {
     await supabase.auth.signOut();
   };
 
-  const handleCheckout = (plan: 'monthly' | 'yearly') => {
-    setLoading(plan);
-    const baseUrl = STRIPE_LINKS[plan];
-    const checkoutUrl = `${baseUrl}?client_reference_id=${user.id}&prefilled_email=${encodeURIComponent(user.email)}`;
-    window.location.href = checkoutUrl;
-  };
+  const Personalities = [
+    { id: AIPersonality.EMPATHETIC, icon: '🥰', name: t('p_empathetic'), desc: t('p_empathetic_desc') },
+    { id: AIPersonality.COACH, icon: '💪', name: t('p_coach'), desc: t('p_coach_desc') },
+    { id: AIPersonality.DIRECT, icon: '🎯', name: t('p_direct'), desc: t('p_direct_desc') },
+    { id: AIPersonality.CUSTOM, icon: '✨', name: t('p_custom'), desc: t('p_custom_desc') },
+  ];
+
+  const Intentions = [
+    { id: UserGoal.JOURNAL, icon: '📓', name: t('g_journal') },
+    { id: UserGoal.MEMORY, icon: '🎞️', name: t('g_memory') },
+    { id: UserGoal.DISCIPLINE, icon: '🔥', name: t('g_discipline') },
+    { id: UserGoal.WORK, icon: '🚀', name: t('g_work') },
+  ];
 
   return (
-    <div className="pt-4 space-y-6">
-       <h2 className="text-lg font-semibold text-emerald-900 px-2">Paramètres</h2>
+    <div className="space-y-6 pb-24">
+      <h1 className="text-3xl font-bold text-emerald-900 px-2">{t('settings')}</h1>
 
-       {/* Profile Card */}
-       <div className="bg-white p-6 rounded-[2.5rem] shadow-sm flex items-center gap-4">
-          <div className="w-16 h-16 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-800 text-2xl font-bold uppercase">
-            {user.firstName.charAt(0)}
-          </div>
-          <div className="flex-1 overflow-hidden">
-            <h3 className="text-lg font-bold text-emerald-900 truncate">{user.fullName}</h3>
-            <p className="text-sm text-gray-500">{user.tier === UserTier.PRO ? 'Membre Premium' : 'Plan Gratuit'}</p>
-          </div>
-       </div>
-
-       {/* Usage Stats */}
-       <div className="grid grid-cols-2 gap-3">
-          <div className="bg-white p-4 rounded-3xl shadow-sm">
-             <p className="text-gray-400 text-[10px] font-bold uppercase mb-1">Utilisé aujourd'hui</p>
-             <p className="text-xl font-bold text-emerald-800">
-               {Math.floor(user.todayUsageSeconds / 60)}m {user.todayUsageSeconds % 60}s
-             </p>
-          </div>
-          <div className="bg-white p-4 rounded-3xl shadow-sm">
-             <p className="text-gray-400 text-[10px] font-bold uppercase mb-1">Mots au total</p>
-             <p className="text-xl font-bold text-emerald-800">
-               {(user.totalWords / 1000).toFixed(1)}k
-             </p>
-          </div>
-       </div>
-
-       {/* Account Details */}
-       <div className="bg-white rounded-[2.5rem] shadow-sm overflow-hidden">
-          <SettingItem icon={<Mail size={20} />} label="Email" value={user.email} />
-          <SettingItem icon={<Target size={20} />} label="Objectif" value={user.goal} />
-       </div>
-
-       {/* Subscription Plans - Only for FREE users */}
-       {user.tier === UserTier.FREE && (
-         <div className="bg-emerald-900 text-white p-6 rounded-[2.5rem] shadow-lg relative overflow-hidden">
-            <div className="relative z-10">
-              <h3 className="text-xl font-bold mb-2">Passer à Pro</h3>
-              <p className="text-emerald-200/80 text-sm mb-6">Débloquez 20 min/jour, les analytics détaillées et plus encore.</p>
-
-              <div className="space-y-3">
-                 <button
-                    onClick={() => handleCheckout('yearly')}
-                    disabled={loading !== null}
-                    className="w-full bg-white text-emerald-900 py-3 px-4 rounded-xl font-bold text-sm flex justify-between items-center hover:bg-emerald-50 transition"
-                 >
-                    <span>Annuel (-15%)</span>
-                    <div className="flex items-center gap-2">
-                      <span>70€/an</span>
-                      {loading === 'yearly' && <Loader2 size={16} className="animate-spin" />}
-                    </div>
-                 </button>
-                 <button
-                    onClick={() => handleCheckout('monthly')}
-                    disabled={loading !== null}
-                    className="w-full bg-emerald-800 text-white border border-emerald-700 py-3 px-4 rounded-xl font-semibold text-sm flex justify-between items-center hover:bg-emerald-700 transition"
-                 >
-                    <span>Mensuel</span>
-                    <div className="flex items-center gap-2">
-                       <span>6,90€/mois</span>
-                       {loading === 'monthly' && <Loader2 size={16} className="animate-spin" />}
-                    </div>
-                 </button>
-              </div>
+      {/* Member Status Card */}
+      <div className="bg-emerald-800 rounded-[2rem] p-6 text-white relative overflow-hidden shadow-lg">
+        <div className="relative z-10">
+          <div className="flex justify-between items-start mb-4">
+            <div>
+              <h2 className="text-lg font-bold opacity-90">{t('member_status')}</h2>
+              <p className="text-emerald-100/80 text-sm">Passez à la vitesse supérieure.</p>
             </div>
-         </div>
-       )}
+            <div className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-bold uppercase tracking-wider">
+              {user.tier === UserTier.PRO ? t('pro') : t('free')}
+            </div>
+          </div>
+          <button
+            onClick={onToggleTier}
+            className="bg-white text-emerald-900 px-6 py-3 rounded-xl font-bold text-sm shadow-md active:scale-95 transition-transform"
+          >
+            {user.tier === UserTier.PRO ? 'Gérer abonnement' : t('upgrade')}
+          </button>
+        </div>
 
-       {/* Manage Subscription - Only for PRO users */}
-       {user.tier === UserTier.PRO && (
-         <div className="bg-white rounded-[2.5rem] shadow-sm overflow-hidden">
+        {/* Decorative Circle */}
+        <div className="absolute -bottom-12 -right-12 w-48 h-48 bg-emerald-700/50 rounded-full blur-2xl pointer-events-none" />
+      </div>
+
+      {/* Identity (Read Only for now) */}
+      <div className="space-y-4">
+        <p className="px-4 text-[10px] font-bold uppercase tracking-wider text-gray-400">Identité</p>
+        <div className="bg-white rounded-[1.5rem] p-4 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-emerald-900">{t('firstname')}</span>
+            <span className="text-gray-500 bg-gray-100 px-3 py-1 rounded-lg text-sm">{user.firstName}</span>
+          </div>
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-emerald-900">{t('email')}</span>
+            <span className="text-gray-500 bg-gray-100 px-3 py-1 rounded-lg text-sm">{user.email}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Voice of June */}
+      <div className="space-y-4">
+        <p className="px-4 text-[10px] font-bold uppercase tracking-wider text-gray-400">{t('voice_of_june')}</p>
+        <div className="bg-white rounded-[2rem] p-6 shadow-sm space-y-6">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-emerald-900 text-lg">{t('voice_response')}</span>
             <button
-              onClick={() => handleComingSoon('portal')}
-              className="w-full flex items-center justify-between p-5 hover:bg-gray-50 transition"
+              onClick={() => setVoiceResponse(!settings.voiceResponse)}
+              className={`w-14 h-8 rounded-full transition-colors relative ${settings.voiceResponse ? 'bg-emerald-500' : 'bg-gray-200'}`}
             >
-              <div className="flex items-center gap-3 text-emerald-900">
-                <ExternalLink size={20} className="text-emerald-600" />
-                <span className="font-medium text-sm">Gérer mon abonnement</span>
-              </div>
-              <ChevronRight size={20} className="text-gray-400" />
+              <div className={`absolute top-1 left-1 bg-white w-6 h-6 rounded-full shadow-sm transition-transform ${settings.voiceResponse ? 'translate-x-6' : ''}`} />
             </button>
-         </div>
-       )}
-
-       {/* Preferences */}
-       <div className="bg-white rounded-[2.5rem] shadow-sm overflow-hidden">
-          {/* Dark Mode Toggle */}
-          <div className="flex items-center justify-between p-5 border-b border-gray-50">
-             <div className="flex items-center gap-3 text-emerald-900">
-                <div className="text-emerald-600"><Moon size={20} /></div>
-                <span className="font-medium text-sm">Mode sombre</span>
-             </div>
-             <button
-               onClick={() => setDarkMode(!settings.darkMode)}
-               className={`w-12 h-7 rounded-full transition-colors ${settings.darkMode ? 'bg-emerald-600' : 'bg-gray-300'}`}
-             >
-               <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform mx-1 ${settings.darkMode ? 'translate-x-5' : 'translate-x-0'}`} />
-             </button>
           </div>
 
-          {/* Reminder Toggle */}
-          <div className="flex items-center justify-between p-5 border-b border-gray-50">
-             <div className="flex items-center gap-3 text-emerald-900">
-                <div className="text-emerald-600"><Bell size={20} /></div>
-                <div>
-                  <span className="font-medium text-sm block">Rappel quotidien</span>
-                  {settings.reminderEnabled && (
-                    <span className="text-xs text-gray-400">À {settings.reminderTime}</span>
-                  )}
-                </div>
-             </div>
-             <div className="flex items-center gap-2">
-               {settings.reminderEnabled && (
-                 <button
-                   onClick={() => setShowReminderModal(true)}
-                   className="text-xs text-emerald-600 font-medium"
-                 >
-                   Modifier
-                 </button>
-               )}
-               <button
-                 onClick={() => setReminderEnabled(!settings.reminderEnabled)}
-                 className={`w-12 h-7 rounded-full transition-colors ${settings.reminderEnabled ? 'bg-emerald-600' : 'bg-gray-300'}`}
-               >
-                 <div className={`w-5 h-5 bg-white rounded-full shadow transition-transform mx-1 ${settings.reminderEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
-               </button>
-             </div>
+          {settings.voiceResponse && (
+            <div className="space-y-2">
+              {AVAILABLE_VOICES.map((voice) => (
+                <button
+                  key={voice.id}
+                  onClick={() => setVoiceName(voice.id)}
+                  className={`w-full flex items-center p-4 rounded-2xl transition-all ${settings.voiceName === voice.id
+                      ? 'bg-emerald-50 text-emerald-900 ring-2 ring-emerald-500/20'
+                      : 'bg-gray-50 text-gray-600 hover:bg-gray-100'
+                    }`}
+                >
+                  <div className={`p-2 rounded-full mr-4 ${settings.voiceName === voice.id ? 'bg-emerald-200 text-emerald-700' : 'bg-gray-200 text-gray-400'}`}>
+                    <Mic size={18} />
+                  </div>
+                  <div className="text-left flex-1">
+                    <p className="font-bold text-sm">{voice.name}</p>
+                    <p className="text-xs opacity-70">{voice.description}</p>
+                  </div>
+                  {settings.voiceName === voice.id && <Check size={20} className="text-emerald-600" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Personality Grid */}
+      <div className="space-y-4">
+        <p className="px-4 text-[10px] font-bold uppercase tracking-wider text-gray-400">{t('personality')}</p>
+        <div className="grid grid-cols-2 gap-3">
+          {Personalities.map((p) => (
+            <button
+              key={p.id}
+              onClick={() => setPersonality(p.id)}
+              className={`p-4 rounded-[1.5rem] flex flex-col items-center justify-center gap-2 text-center transition-all h-32 border-2 ${settings.personality === p.id
+                  ? 'bg-white border-emerald-500 shadow-md'
+                  : 'bg-white border-transparent shadow-sm hover:bg-emerald-50'
+                }`}
+            >
+              <span className="text-2xl">{p.icon}</span>
+              <div>
+                <p className={`text-xs font-bold uppercase ${settings.personality === p.id ? 'text-emerald-800' : 'text-gray-600'}`}>
+                  {p.name}
+                </p>
+                <p className="text-[10px] text-gray-400 leading-tight mt-1">{p.desc}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Intention Grid */}
+      <div className="space-y-4">
+        <p className="px-4 text-[10px] font-bold uppercase tracking-wider text-gray-400">{t('intention')}</p>
+        <div className="grid grid-cols-2 gap-3">
+          {Intentions.map((g) => (
+            <button
+              key={g.id}
+              // Ideally this updates DB, for now purely visual/local if no handler passed
+              // ToDo: Implement Update Goal Logic
+              className={`p-4 rounded-[1.5rem] flex items-center gap-3 transition-all ${user.goal === g.id
+                  ? 'bg-emerald-800 text-white shadow-md'
+                  : 'bg-white text-gray-600 shadow-sm hover:bg-gray-50'
+                }`}
+            >
+              <span className="text-xl">{g.icon}</span>
+              <span className="text-xs font-bold uppercase tracking-wide">{g.name}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Preferences Table */}
+      <div className="space-y-4">
+        <p className="px-4 text-[10px] font-bold uppercase tracking-wider text-gray-400">{t('preferences')}</p>
+        <div className="bg-white rounded-[2rem] p-6 shadow-sm space-y-6">
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-emerald-900">{t('call_time')}</span>
+            <div className="bg-gray-100 rounded-lg px-3 py-1 font-mono text-sm font-bold text-gray-700">
+              <input
+                type="time"
+                value={settings.reminderTime}
+                onChange={(e) => setReminderTime(e.target.value)}
+                className="bg-transparent border-none focus:ring-0 p-0 w-16 text-center"
+              />
+            </div>
           </div>
 
-          {/* Voice Selection */}
-          <SettingItem
-            icon={<UserIcon size={20} />}
-            label="Voix de June"
-            value={AVAILABLE_VOICES.find(v => v.id === settings.voiceName)?.name || 'Puck'}
-            onClick={() => setShowVoiceModal(true)}
-          />
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-emerald-900">{t('notifications')}</span>
+            <button
+              onClick={() => setReminderEnabled(!settings.reminderEnabled)}
+              className={`w-12 h-7 rounded-full transition-colors relative ${settings.reminderEnabled ? 'bg-emerald-500' : 'bg-gray-200'}`}
+            >
+              <div className={`absolute top-1 left-1 bg-white w-5 h-5 rounded-full shadow-sm transition-transform ${settings.reminderEnabled ? 'translate-x-5' : ''}`} />
+            </button>
+          </div>
 
-          {/* Privacy */}
-          <SettingItem
-            icon={<Shield size={20} />}
-            label="Confidentialité"
-            value="Voir"
-            onClick={() => window.open('https://journaly.app/privacy', '_blank')}
-          />
-       </div>
+          <div className="flex items-center justify-between">
+            <span className="font-semibold text-emerald-900">{t('dark_mode')}</span>
+            <button
+              onClick={() => setDarkMode(!settings.darkMode)}
+              className={`w-12 h-7 rounded-full transition-colors relative ${settings.darkMode ? 'bg-emerald-500' : 'bg-gray-200'}`}
+            >
+              <div className={`absolute top-1 left-1 bg-white w-5 h-5 rounded-full shadow-sm transition-transform ${settings.darkMode ? 'translate-x-5' : ''}`} />
+            </button>
+          </div>
+        </div>
+      </div>
 
-       {/* Voice Selection Modal */}
-       {showVoiceModal && (
-         <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => setShowVoiceModal(false)}>
-           <div className="bg-white w-full max-w-md rounded-t-3xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
-             <h3 className="text-lg font-bold text-emerald-900">Choisir la voix de June</h3>
-             <div className="space-y-2">
-               {AVAILABLE_VOICES.map(voice => (
-                 <button
-                   key={voice.id}
-                   onClick={() => {
-                     setVoiceName(voice.id);
-                     setShowVoiceModal(false);
-                   }}
-                   className={`w-full flex items-center justify-between p-4 rounded-xl transition ${
-                     settings.voiceName === voice.id ? 'bg-emerald-100 border-2 border-emerald-500' : 'bg-gray-50 hover:bg-gray-100'
-                   }`}
-                 >
-                   <div>
-                     <span className="font-medium text-emerald-900">{voice.name}</span>
-                     <p className="text-xs text-gray-500">{voice.description}</p>
-                   </div>
-                   {settings.voiceName === voice.id && <Check size={20} className="text-emerald-600" />}
-                 </button>
-               ))}
-             </div>
-             <button
-               onClick={() => setShowVoiceModal(false)}
-               className="w-full py-3 text-gray-500 font-medium"
-             >
-               Annuler
-             </button>
-           </div>
-         </div>
-       )}
+      {/* Data Section */}
+      <div className="space-y-4">
+        <p className="px-4 text-[10px] font-bold uppercase tracking-wider text-gray-400">{t('data_backup')}</p>
+        <div className="grid grid-cols-2 gap-3">
+          <button className="bg-gray-100 rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-gray-200 transition">
+            <Download size={20} className="text-gray-600" />
+            <span className="text-xs font-bold text-gray-700">{t('export_json')}</span>
+          </button>
+          <button className="bg-gray-100 rounded-xl p-4 flex flex-col items-center justify-center gap-2 hover:bg-gray-200 transition">
+            <FileText size={20} className="text-gray-600" />
+            <span className="text-xs font-bold text-gray-700">{t('export_csv')}</span>
+          </button>
+        </div>
+        <button className="w-full bg-gray-50 border-2 border-dashed border-gray-200 rounded-xl p-4 flex items-center justify-center gap-2 hover:bg-gray-100 transition">
+          <Upload size={16} className="text-gray-500" />
+          <span className="text-xs font-bold text-gray-500">{t('import_backup')}</span>
+        </button>
 
-       {/* Reminder Time Modal */}
-       {showReminderModal && (
-         <div className="fixed inset-0 bg-black/50 z-50 flex items-end justify-center" onClick={() => setShowReminderModal(false)}>
-           <div className="bg-white w-full max-w-md rounded-t-3xl p-6 space-y-4" onClick={e => e.stopPropagation()}>
-             <h3 className="text-lg font-bold text-emerald-900">Heure du rappel</h3>
-             <input
-               type="time"
-               value={settings.reminderTime}
-               onChange={(e) => setReminderTime(e.target.value)}
-               className="w-full p-4 text-2xl text-center border border-gray-200 rounded-xl focus:border-emerald-500 focus:outline-none"
-             />
-             <button
-               onClick={() => setShowReminderModal(false)}
-               className="w-full py-3 bg-emerald-600 text-white font-medium rounded-xl"
-             >
-               Enregistrer
-             </button>
-           </div>
-         </div>
-       )}
+        <p className="text-[10px] text-center text-gray-400 px-8 leading-relaxed">
+          L'import écrasera les données actuelles. Utilisez un fichier .json généré par Journaly.
+        </p>
+      </div>
 
-       <button onClick={handleSignOut} className="w-full py-4 text-red-500 font-medium text-sm flex items-center justify-center gap-2">
-         <LogOut size={16} /> Se déconnecter
-       </button>
+      {/* Logout */}
+      <button
+        onClick={handleLogout}
+        className="w-full border-2 border-emerald-100 text-emerald-800 font-bold py-4 rounded-2xl uppercase tracking-widest text-xs hover:bg-emerald-50 transition mt-8"
+      >
+        {t('logout')}
+      </button>
     </div>
   );
 };
-
-interface SettingItemProps {
-  icon: React.ReactNode;
-  label: string;
-  value?: string;
-  onClick?: () => void;
-}
-
-const SettingItem: React.FC<SettingItemProps> = ({ icon, label, value, onClick }) => (
-  <div
-    onClick={onClick}
-    className="flex items-center justify-between p-5 border-b border-gray-50 last:border-0 hover:bg-gray-50 transition cursor-pointer"
-  >
-     <div className="flex items-center gap-3 text-emerald-900">
-        <div className="text-emerald-600">{icon}</div>
-        <span className="font-medium text-sm">{label}</span>
-     </div>
-     <div className="flex items-center gap-2">
-       {value && <span className="text-sm text-gray-400 max-w-[150px] truncate">{value}</span>}
-       <ChevronRight size={16} className="text-gray-300" />
-     </div>
-  </div>
-);
 
 export default Settings;

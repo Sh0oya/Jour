@@ -1,6 +1,8 @@
-import React, { useMemo } from 'react';
-import { Play, Smile, Zap, Clock, Lock } from 'lucide-react';
-import { User, Mood, UserTier } from '../types';
+import React from 'react';
+import { User, Mood } from '../types';
+import { useSettings } from '../contexts/SettingsContext';
+import { Mic, Lightbulb, Trophy, Coffee, Flame, Smile, Zap } from 'lucide-react';
+import { getTranslation } from '../lib/i18n';
 
 interface DashboardProps {
   user: User;
@@ -8,127 +10,123 @@ interface DashboardProps {
 }
 
 const Dashboard: React.FC<DashboardProps> = ({ user, onStartSession }) => {
-  // Limits configuration
-  const LIMITS = {
-    [UserTier.FREE]: 30, // 30 seconds
-    [UserTier.PRO]: 20 * 60 // 20 minutes
+  const { settings, t } = useSettings();
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return "Bonjour";
+    if (hour < 18) return "Bonne après-midi";
+    return "Bonsoir";
   };
 
-  const dailyLimit = LIMITS[user.tier];
-  // Ensure we don't show negative remaining time
-  const remainingSeconds = Math.max(0, dailyLimit - (user.todayUsageSeconds || 0));
-  const usagePercent = Math.min(100, ((user.todayUsageSeconds || 0) / dailyLimit) * 100);
-  
-  const formatTime = (secs: number) => {
-    if (secs < 60) return `${secs}s`;
-    return `${Math.ceil(secs / 60)}m`;
+  const formatDate = () => {
+    return new Date().toLocaleDateString(settings.language === 'fr' ? 'fr-FR' : 'en-US', {
+      weekday: 'long',
+      day: 'numeric',
+      month: 'long'
+    }).toUpperCase();
   };
-
-  const isLimitReached = remainingSeconds <= 0;
 
   return (
-    <div className="space-y-6 pt-4">
-      {/* Usage Limit Bar (New Requirement) */}
-      <div className="bg-white px-5 py-4 rounded-[2rem] shadow-sm flex flex-col gap-2">
-         <div className="flex justify-between items-center text-xs font-bold uppercase tracking-wider text-gray-400">
-            <span className="flex items-center gap-1"><Clock size={12} /> Daily Allowance</span>
-            <span className={isLimitReached ? "text-red-500" : "text-emerald-600"}>
-              {formatTime(remainingSeconds)} remaining
-            </span>
-         </div>
-         <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
-            <div 
-              className={`h-full rounded-full transition-all duration-500 ${isLimitReached ? 'bg-red-400' : 'bg-emerald-500'}`} 
-              style={{ width: `${usagePercent}%` }}
-            ></div>
-         </div>
-         {user.tier === UserTier.FREE ? (
-           <p className="text-[10px] text-center text-gray-400 mt-1">
-             Free Plan limited to 30s/day. <span className="text-emerald-600 font-bold">Upgrade for 20m.</span>
-           </p>
-         ) : (
-           <p className="text-[10px] text-center text-gray-400 mt-1">
-             Pro Plan limited to 20m/day. <span className="text-emerald-600 font-bold">Enjoy your session.</span>
-           </p>
-         )}
+    <div className="space-y-8 pt-6 pb-24">
+
+      {/* Header */}
+      <div className="px-2">
+        <p className="text-xs font-bold text-emerald-800/60 uppercase tracking-widest mb-1">
+          {formatDate()}
+        </p>
+        <h1 className="text-3xl font-extrabold text-emerald-900 leading-tight">
+          {getGreeting()} {user.firstName || 'Invité'} !
+        </h1>
       </div>
 
-      {/* Hero Action */}
+      {/* Main Action Card */}
       <div className="relative group">
-        <div className="absolute -inset-1 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-[2.5rem] blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
-        <button 
-          onClick={onStartSession}
-          disabled={isLimitReached}
-          className={`relative w-full py-8 px-6 rounded-[2.5rem] flex flex-col items-center justify-center gap-3 shadow-xl transition-all active:scale-[0.98] ${isLimitReached ? 'bg-gray-100 cursor-not-allowed' : 'bg-emerald-800 text-white hover:bg-emerald-900'}`}
-        >
-          {isLimitReached ? (
-             <>
-               <div className="w-16 h-16 bg-gray-200 rounded-full flex items-center justify-center mb-1">
-                 <Lock className="text-gray-400" size={32} />
-               </div>
-               <h2 className="text-xl font-semibold text-gray-500">Daily limit reached</h2>
-               <p className="text-gray-400 text-sm">Come back tomorrow</p>
-             </>
-          ) : (
-             <>
-                <div className="w-16 h-16 bg-white/10 rounded-full flex items-center justify-center mb-1 group-hover:scale-110 transition-transform">
-                  <Play fill="currentColor" size={32} className="ml-1" />
-                </div>
-                <h2 className="text-xl font-semibold">Tell me about your day</h2>
-                <p className="text-emerald-100/70 text-sm">Tap to start talking with June</p>
-             </>
-          )}
-        </button>
+        <div className="absolute -inset-1 bg-emerald-600 rounded-[2.5rem] blur opacity-20 group-hover:opacity-40 transition duration-500"></div>
+        <div className="relative bg-emerald-800 rounded-[2.5rem] p-8 text-white text-center shadow-xl overflow-hidden">
+
+          {/* Background Decor */}
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-32 h-32 bg-black/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+
+          {/* Content */}
+          <div className="flex flex-col items-center gap-6 relative z-10">
+            <div className="w-20 h-20 bg-white/10 rounded-full flex items-center justify-center backdrop-blur-md shadow-inner border border-white/10 mb-2">
+              <Mic size={36} className="text-white drop-shadow-md" />
+            </div>
+
+            <div className="space-y-2">
+              <h2 className="text-2xl font-bold">{t('tell_me_day')}</h2>
+              <p className="text-emerald-100/70 font-medium">{t('june_ready')}</p>
+            </div>
+
+            <button
+              onClick={onStartSession}
+              className="mt-2 bg-white text-emerald-900 px-8 py-4 rounded-full font-bold shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center gap-2"
+            >
+              {t('start_call')}
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Quick Pills */}
-      <div className={`flex gap-3 overflow-x-auto no-scrollbar pb-2 ${isLimitReached ? 'opacity-50 pointer-events-none' : ''}`}>
-        {['✨ A Victory', '💡 An Idea', '🍵 Calm Moment', '😤 Rant'].map((pill) => (
-          <button key={pill} onClick={onStartSession} className="whitespace-nowrap px-5 py-2.5 bg-white border border-emerald-100 rounded-full text-emerald-800 text-sm font-medium hover:bg-emerald-50 transition shadow-sm">
-            {pill}
+      {/* Quick Actions */}
+      <div className="grid grid-cols-4 gap-3 px-1">
+        {[
+          { icon: <Lightbulb size={20} className="text-amber-500" />, label: t('idea') },
+          { icon: <Trophy size={20} className="text-purple-500" />, label: t('challenge') }, // 'Défi' in screenshot has swords, Trophy closer
+          { icon: <Sparkles size={20} className="text-blue-500" />, label: t('victory') },
+          { icon: <Coffee size={20} className="text-orange-500" />, label: t('calm') },
+        ].map((action, i) => (
+          <button
+            key={i}
+            onClick={onStartSession}
+            className="flex flex-col items-center justify-center gap-2 bg-white rounded-3xl py-4 shadow-sm hover:bg-emerald-50 transition border border-transparent hover:border-emerald-100"
+          >
+            <div className="w-10 h-10 rounded-full bg-gray-50 flex items-center justify-center">
+              {action.icon}
+            </div>
+            <span className="text-[10px] font-bold text-gray-500 uppercase tracking-wide">{action.label}</span>
           </button>
         ))}
       </div>
 
-      {/* Bento Grid */}
+      {/* Widgets Grid */}
       <div className="grid grid-cols-2 gap-4">
-        {/* Mood Card */}
-        <div className="col-span-1 bg-white p-5 rounded-[2rem] shadow-sm flex flex-col justify-between h-40">
-           <div className="flex justify-between items-start">
-              <span className="text-xs font-bold uppercase text-gray-400">Current Mood</span>
-              <Smile size={18} className="text-emerald-600" />
-           </div>
-           <div className="text-center">
-              <span className="text-4xl">😌</span>
-              <p className="text-emerald-900 font-semibold mt-2">Peaceful</p>
-           </div>
+
+        {/* Mood Widget */}
+        <div className="bg-white p-6 rounded-[2.5rem] shadow-sm flex flex-col items-center justify-between text-center gap-4">
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t('mood_today')}</span>
+          <div className="text-5xl drop-shadow-sm">😌</div>
+          <div className="w-8 h-8 rounded-full bg-orange-100 flex items-center justify-center">
+            <span className="text-xs">😴</span>
+          </div>
         </div>
 
-        {/* Streak Card */}
-        <div className="col-span-1 bg-[#FDF6E3] p-5 rounded-[2rem] shadow-sm flex flex-col justify-between h-40 border border-orange-100">
-           <div className="flex justify-between items-start">
-              <span className="text-xs font-bold uppercase text-orange-400">Streak</span>
-              <Zap size={18} className="text-orange-500" />
-           </div>
-           <div className="text-center">
-              <span className="text-4xl font-bold text-orange-800">{user.streak}</span>
-              <p className="text-orange-800/80 text-sm mt-1">Days in a row</p>
-           </div>
+        {/* Themes Widget (Empty State style) */}
+        <div className="bg-white p-6 rounded-[2.5rem] shadow-sm flex flex-col justify-between gap-4">
+          <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">{t('themes')}</span>
+          <div className="flex flex-wrap gap-2 content-start">
+            <span className="bg-emerald-50 text-emerald-800 text-[10px] font-bold px-3 py-1.5 rounded-full">Avancée</span>
+            <span className="bg-emerald-50 text-emerald-800 text-[10px] font-bold px-3 py-1.5 rounded-full">Projet</span>
+            <span className="bg-emerald-50 text-emerald-800 text-[10px] font-bold px-3 py-1.5 rounded-full">Alpha</span>
+          </div>
         </div>
 
-        {/* Last Entry Ticket */}
-        <div className="col-span-2 bg-white p-5 rounded-[2rem] shadow-sm border-l-4 border-l-emerald-800 relative overflow-hidden">
-           <div className="flex justify-between items-center mb-3">
-             <span className="text-xs font-bold uppercase text-gray-400">Last Memory</span>
-             <span className="text-xs bg-emerald-100 text-emerald-800 px-2 py-1 rounded-md">Yesterday</span>
-           </div>
-           <p className="text-emerald-900 font-medium leading-relaxed line-clamp-2">
-             "Felt really productive finishing that design system. The coffee shop was noisy but handled it well..."
-           </p>
-           <div className="mt-4 flex gap-2">
-              <span className="text-[10px] bg-gray-100 px-2 py-1 rounded-full text-gray-600">#Productivity</span>
-              <span className="text-[10px] bg-gray-100 px-2 py-1 rounded-full text-gray-600">#Focus</span>
-           </div>
+        {/* Last Memory Widget - Full Width */}
+        <div className="col-span-2 bg-white p-6 rounded-[2.5rem] shadow-sm space-y-4">
+          <div className="flex items-center justify-between border-b border-gray-100 pb-4">
+            <h3 className="font-bold text-emerald-900">{t('last_memory')}</h3>
+            <span className="text-xs bg-gray-100 text-gray-500 px-3 py-1 rounded-full font-medium">samedi 29</span>
+          </div>
+
+          <p className="text-gray-600 text-sm leading-relaxed italic">
+            "Journée productive au travail, le projet Alpha avance bien. Un peu de stress lié aux délais, mais bonne séance de sport le soir pour décompresser."
+          </p>
+
+          <div className="flex justify-end">
+            <div className="text-2xl">😌</div>
+          </div>
         </div>
       </div>
     </div>

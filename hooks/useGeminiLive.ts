@@ -11,9 +11,10 @@ interface UseGeminiLiveProps {
   apiKey: string;
   systemInstruction?: string;
   voiceName?: string;
+  voiceResponseEnabled?: boolean;
 }
 
-export const useGeminiLive = ({ apiKey, systemInstruction, voiceName = 'Puck' }: UseGeminiLiveProps) => {
+export const useGeminiLive = ({ apiKey, systemInstruction, voiceName = 'Puck', voiceResponseEnabled = true }: UseGeminiLiveProps) => {
   const [isConnected, setIsConnected] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false); // Model is speaking
   const [error, setError] = useState<string | null>(null);
@@ -81,9 +82,9 @@ export const useGeminiLive = ({ apiKey, systemInstruction, voiceName = 'Puck' }:
     sourcesRef.current.clear();
     nextStartTimeRef.current = 0;
     
-    // Don't fully close output context to allow re-connection reuse or just suspend
     if(outputContextRef.current) {
-       await outputContextRef.current.suspend();
+       await outputContextRef.current.close();
+       outputContextRef.current = null;
     }
 
     setIsConnected(false);
@@ -157,26 +158,33 @@ export const useGeminiLive = ({ apiKey, systemInstruction, voiceName = 'Puck' }:
             // Handle Audio
             const base64Audio = msg.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
             if (base64Audio) {
-              setIsSpeaking(true);
-              const audioData = base64ToUint8Array(base64Audio);
-              const audioBuffer = await decodeAudioData(audioData, outputCtx, OUTPUT_SAMPLE_RATE);
               
-              nextStartTimeRef.current = Math.max(nextStartTimeRef.current, outputCtx.currentTime);
-              
-              const source = outputCtx.createBufferSource();
-              source.buffer = audioBuffer;
-              source.connect(outputNodeRef.current);
-              
-              source.addEventListener('ended', () => {
-                 sourcesRef.current.delete(source);
-                 if (sourcesRef.current.size === 0) {
-                     setIsSpeaking(false);
-                 }
-              });
-              
-              source.start(nextStartTimeRef.current);
-              nextStartTimeRef.current += audioBuffer.duration;
-              sourcesRef.current.add(source);
+              // Only play audio if enabled
+              if (voiceResponseEnabled) {
+                  setIsSpeaking(true);
+                  const audioData = base64ToUint8Array(base64Audio);
+                  const audioBuffer = await decodeAudioData(audioData, outputCtx, OUTPUT_SAMPLE_RATE);
+                  
+                  // Simple scheduling
+                  if (nextStartTimeRef.current < outputCtx.currentTime) {
+                    nextStartTimeRef.current = outputCtx.currentTime;
+                  }
+                  
+                  const source = outputCtx.createBufferSource();
+                  source.buffer = audioBuffer;
+                  source.connect(outputNodeRef.current);
+                  
+                  source.addEventListener('ended', () => {
+                    sourcesRef.current.delete(source);
+                    if (sourcesRef.current.size === 0) {
+                        setIsSpeaking(false);
+                    }
+                  });
+                  
+                  source.start(nextStartTimeRef.current);
+                  nextStartTimeRef.current += audioBuffer.duration;
+                  sourcesRef.current.add(source);
+              }
             }
             
             // Handle Transcription
@@ -227,7 +235,7 @@ export const useGeminiLive = ({ apiKey, systemInstruction, voiceName = 'Puck' }:
       setError(err.message || "Failed to start session");
       stop();
     }
-  }, [apiKey, isConnected, ensureAudioContexts, stop, systemInstruction, voiceName]);
+  }, [apiKey, isConnected, ensureAudioContexts, stop, systemInstruction, voiceName, voiceResponseEnabled]);
 
   // Cleanup on unmount
   useEffect(() => {
