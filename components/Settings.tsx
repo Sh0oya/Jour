@@ -8,6 +8,12 @@ interface SettingsProps {
   onToggleTier: () => void;
 }
 
+// Stripe Payment Links
+const STRIPE_LINKS = {
+  monthly: 'https://buy.stripe.com/3cI4gzb741RB0Whg8b7ok00',
+  yearly: 'https://buy.stripe.com/fZu28rejg67R9sNf477ok01',
+};
+
 const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
   const [loading, setLoading] = useState<string | null>(null);
 
@@ -15,16 +21,15 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
     await supabase.auth.signOut();
   };
 
-  const handleCheckout = (productId: string, type: string) => {
-    setLoading(productId);
-    // Mock Checkout Flow
-    setTimeout(() => {
-      alert(`Redirecting to Stripe Checkout for ${type}...\nProduct ID: ${productId}`);
-      setLoading(null);
-      if (user.tier === UserTier.FREE) {
-        onToggleTier();
-      }
-    }, 1500);
+  const handleCheckout = (plan: 'monthly' | 'yearly') => {
+    setLoading(plan);
+
+    // Construire l'URL avec le client_reference_id pour identifier l'utilisateur
+    const baseUrl = STRIPE_LINKS[plan];
+    const checkoutUrl = `${baseUrl}?client_reference_id=${user.id}&prefilled_email=${encodeURIComponent(user.email)}`;
+
+    // Rediriger vers Stripe Checkout
+    window.location.href = checkoutUrl;
   };
 
   return (
@@ -72,26 +77,26 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
               <p className="text-emerald-200/80 text-sm mb-6">Unlock unlimited recording, detailed analytics, and custom AI personas.</p>
               
               <div className="space-y-3">
-                 <button 
-                    onClick={() => handleCheckout('prod_TX39kkalgnmXK8', 'Annual')}
+                 <button
+                    onClick={() => handleCheckout('yearly')}
                     disabled={loading !== null}
                     className="w-full bg-white text-emerald-900 py-3 px-4 rounded-xl font-bold text-sm flex justify-between items-center hover:bg-emerald-50 transition"
                  >
-                    <span>Yearly (Save 20%)</span>
+                    <span>Yearly (Save 15%)</span>
                     <div className="flex items-center gap-2">
                       <span>70€/yr</span>
-                      {loading === 'prod_TX39kkalgnmXK8' && <Loader2 size={16} className="animate-spin" />}
+                      {loading === 'yearly' && <Loader2 size={16} className="animate-spin" />}
                     </div>
                  </button>
-                 <button 
-                    onClick={() => handleCheckout('prod_TX37pvXS5g2QO0', 'Monthly')}
+                 <button
+                    onClick={() => handleCheckout('monthly')}
                     disabled={loading !== null}
                     className="w-full bg-emerald-800 text-white border border-emerald-700 py-3 px-4 rounded-xl font-semibold text-sm flex justify-between items-center hover:bg-emerald-700 transition"
                  >
                     <span>Monthly</span>
                     <div className="flex items-center gap-2">
-                       <span>7€/mo</span>
-                       {loading === 'prod_TX37pvXS5g2QO0' && <Loader2 size={16} className="animate-spin" />}
+                       <span>6,90€/mo</span>
+                       {loading === 'monthly' && <Loader2 size={16} className="animate-spin" />}
                     </div>
                  </button>
               </div>
