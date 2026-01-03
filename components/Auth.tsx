@@ -58,7 +58,11 @@ export const Auth: React.FC = () => {
     <div className="min-h-screen bg-mint-50 flex flex-col items-center justify-center p-6 text-emerald-900">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-emerald-800 mb-2">Journaly</h1>
+          <img
+            src="https://www.ppc-digital.fr/wp-content/uploads/2025/12/Design-sans-titre-1-1.png"
+            alt="Journaly Logo"
+            className="w-32 h-auto mx-auto mb-4 drop-shadow-sm"
+          />
           <p className="text-emerald-800/60">Your intelligent audio companion</p>
         </div>
 
@@ -68,7 +72,7 @@ export const Auth: React.FC = () => {
           </h2>
 
           <form onSubmit={handleAuth} className="space-y-4">
-            
+
             {/* Sign Up Specific Fields */}
             {!isLogin && (
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
@@ -101,7 +105,7 @@ export const Auth: React.FC = () => {
                   <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 ml-3">Objective</label>
                   <div className="relative">
                     <Target size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-700" />
-                    <select 
+                    <select
                       value={goal}
                       onChange={(e) => setGoal(e.target.value as UserGoal)}
                       className="w-full bg-mint-50 border-none rounded-2xl pl-12 pr-5 py-3 text-emerald-900 focus:ring-2 focus:ring-emerald-500/20 appearance-none"
@@ -127,7 +131,7 @@ export const Auth: React.FC = () => {
                 required
               />
             </div>
-            
+
             <div>
               <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 ml-3">Password</label>
               <input

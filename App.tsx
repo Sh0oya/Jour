@@ -200,7 +200,7 @@ const AppContent: React.FC = () => {
       <div className="h-screen w-full flex items-center justify-center bg-mint-50 flex-col gap-4">
         <Loader2 className="animate-spin text-emerald-800" size={32} />
         <p className="text-emerald-800/60 text-sm">Loading June...</p>
-        <DebugConsole />
+
       </div>
     );
   }
