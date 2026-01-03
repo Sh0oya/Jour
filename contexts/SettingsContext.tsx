@@ -97,8 +97,27 @@ export const SettingsProvider: React.FC<{ children: ReactNode }> = ({ children }
     return () => clearInterval(interval);
   }, [settings.reminderEnabled, settings.reminderTime, settings.language]);
 
+  const setReminderEnabled = async (enabled: boolean) => {
+    if (enabled) {
+      if ('Notification' in window) {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+          setSettings(prev => ({ ...prev, reminderEnabled: true }));
+        } else {
+          alert(settings.language === 'fr'
+            ? "Les notifications sont bloquées par votre navigateur. Veuillez les activer dans les paramètres du site."
+            : "Notifications are blocked by your browser. Please enable them in site settings.");
+          setSettings(prev => ({ ...prev, reminderEnabled: false }));
+        }
+      } else {
+        alert("Ce navigateur ne supporte pas les notifications.");
+      }
+    } else {
+      setSettings(prev => ({ ...prev, reminderEnabled: false }));
+    }
+  };
+
   const setDarkMode = (enabled: boolean) => setSettings(prev => ({ ...prev, darkMode: enabled }));
-  const setReminderEnabled = (enabled: boolean) => setSettings(prev => ({ ...prev, reminderEnabled: enabled }));
   const setReminderTime = (time: string) => setSettings(prev => ({ ...prev, reminderTime: time }));
   const setVoiceName = (voice: string) => setSettings(prev => ({ ...prev, voiceName: voice }));
   const setLanguage = (lang: Language) => setSettings(prev => ({ ...prev, language: lang }));

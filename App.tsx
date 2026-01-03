@@ -6,7 +6,7 @@ import Analytics from './components/Analytics';
 import Settings from './components/Settings';
 import VoiceSession from './components/VoiceSession';
 import { Auth } from './components/Auth';
-import DebugConsole from './components/DebugConsole';
+
 import { Tab, User, UserTier, UserGoal, JournalEntry, Mood } from './types';
 import { supabase } from './lib/supabase';
 import { Loader2 } from 'lucide-react';
@@ -207,7 +207,7 @@ const AppContent: React.FC = () => {
 
   return (
     <>
-      <DebugConsole />
+
       {!session ? (
         <Auth />
       ) : isSessionActive ? (
