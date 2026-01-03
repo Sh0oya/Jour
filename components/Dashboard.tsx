@@ -1,7 +1,7 @@
 import React from 'react';
 import { User, Mood } from '../types';
 import { useSettings } from '../contexts/SettingsContext';
-import { Mic, Lightbulb, Trophy, Coffee, Flame, Smile, Zap } from 'lucide-react';
+import { Mic, Lightbulb, Trophy, Coffee, Flame, Smile, Zap, Sparkles } from 'lucide-react';
 import { getTranslation } from '../lib/i18n';
 
 interface DashboardProps {
