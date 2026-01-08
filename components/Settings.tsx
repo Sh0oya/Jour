@@ -28,6 +28,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
   } = useSettings();
 
   const [loading, setLoading] = useState<string | null>(null);
+  const [portalLoading, setPortalLoading] = useState(false);
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -39,6 +40,43 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
     // Pass user ID for webhook metadata
     const checkoutUrl = `${baseUrl}?client_reference_id=${user.id}&prefilled_email=${encodeURIComponent(user.email)}`;
     window.location.href = checkoutUrl;
+  };
+
+  const handleManageSubscription = async () => {
+    setPortalLoading(true);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        console.error('No session found');
+        return;
+      }
+
+      const response = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-portal-session`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            return_url: window.location.origin + '/settings',
+          }),
+        }
+      );
+
+      const data = await response.json();
+
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        console.error('No portal URL returned:', data.error);
+      }
+    } catch (error) {
+      console.error('Error opening customer portal:', error);
+    } finally {
+      setPortalLoading(false);
+    }
   };
 
   const Personalities = [
@@ -74,9 +112,11 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
 
           {user.tier === UserTier.PRO ? (
             <button
-              onClick={() => window.location.href = 'https://billing.stripe.com/p/login/test_xxx'} // Replace with real portal if available
-              className="bg-white text-emerald-900 px-6 py-3 rounded-xl font-bold text-sm shadow-md active:scale-95 transition-transform"
+              onClick={handleManageSubscription}
+              disabled={portalLoading}
+              className="bg-white text-emerald-900 px-6 py-3 rounded-xl font-bold text-sm shadow-md active:scale-95 transition-transform flex items-center gap-2 disabled:opacity-70"
             >
+              {portalLoading && <Loader2 size={14} className="animate-spin" />}
               Gérer abonnement
             </button>
           ) : (
