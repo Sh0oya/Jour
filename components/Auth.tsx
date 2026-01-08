@@ -14,6 +14,7 @@ export const Auth: React.FC = () => {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [goal, setGoal] = useState<UserGoal>(UserGoal.JOURNAL);
+  const [acceptedRGPD, setAcceptedRGPD] = useState(false);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,6 +32,9 @@ export const Auth: React.FC = () => {
         // Sign Up with Metadata
         if (!firstName || !lastName) {
           throw new Error("First name and Last name are required.");
+        }
+        if (!acceptedRGPD) {
+          throw new Error("Vous devez accepter la politique de confidentialité.");
         }
 
         const { error } = await supabase.auth.signUp({
@@ -143,6 +147,27 @@ export const Auth: React.FC = () => {
                 required
               />
             </div>
+
+            {/* RGPD Checkbox - Only for Sign Up */}
+            {!isLogin && (
+              <div className="flex items-start gap-3 p-4 bg-mint-50 rounded-2xl animate-in fade-in slide-in-from-bottom-4 duration-300">
+                <input
+                  type="checkbox"
+                  id="rgpd"
+                  checked={acceptedRGPD}
+                  onChange={(e) => setAcceptedRGPD(e.target.checked)}
+                  className="mt-1 w-5 h-5 rounded-lg border-2 border-emerald-300 text-emerald-600 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer"
+                />
+                <label htmlFor="rgpd" className="text-xs text-emerald-800/80 leading-relaxed cursor-pointer">
+                  J'accepte la{' '}
+                  <a href="/privacy" target="_blank" className="text-emerald-700 font-semibold underline hover:text-emerald-900">
+                    politique de confidentialité
+                  </a>{' '}
+                  et le traitement de mes données vocales. Mes données sont{' '}
+                  <span className="font-semibold text-emerald-700">chiffrées de bout en bout</span>.
+                </label>
+              </div>
+            )}
 
             {error && (
               <div className="p-3 bg-red-50 text-red-500 text-xs font-medium rounded-xl text-center">
