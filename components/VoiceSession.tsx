@@ -160,25 +160,37 @@ const VoiceSession: React.FC<VoiceSessionProps> = ({ user, onClose }) => {
           const ai = new GoogleGenAI({ apiKey });
 
           const jsonPrompt = `
-            Analyse la conversation suivante entre l'utilisateur et June (l'IA).
-            
-            Objectifs:
-            1. Résumé: 2 phrases max, concises.
-            2. Mood: Déduis l'humeur EXACTE de l'utilisateur parmi [GREAT, GOOD, NEUTRAL, BAD, TERRIBLE]. Analyse le ton, les mots choisis et le contexte. Ne sois pas neutre par défaut ! Si l'utilisateur semble juste un peu positif, mets GOOD. S'il est très enthousiaste, GREAT. S'il est fatigué/triste, BAD ou TERRIBLE.
-            3. Tags: 3 à 5 mots-clés pertinents (thèmes abordés).
-            4. Action Items: Extrais les "promesses", "tâches" ou "choses à faire" que l'utilisateur a mentionné vouloir faire. (Ex: "Je dois appeler Maman", "Fini ce projet demain"). Si rien, tableau vide.
+            Tu es un expert en analyse émotionnelle. Analyse cette conversation de journal intime.
 
-            Retourne UNIQUEMENT un JSON valide :
+            RÈGLES STRICTES POUR LE MOOD :
+            - GREAT : Enthousiasme, joie, excitation, bonnes nouvelles, accomplissements, gratitude
+            - GOOD : Satisfaction, calme positif, journée correcte, petit plaisir, contentement
+            - NEUTRAL : UNIQUEMENT si vraiment aucune émotion détectable ou sujet 100% factuel/administratif
+            - BAD : Frustration, fatigue, stress, déception, inquiétude, journée difficile
+            - TERRIBLE : Tristesse profonde, colère, détresse, crise, événement grave
+
+            IMPORTANT :
+            - La plupart des gens parlent avec une teinte émotionnelle. NEUTRAL doit être RARE (< 10% des cas).
+            - Si la personne parle de sa journée normalement → GOOD (pas neutral)
+            - Si elle mentionne quelque chose de positif même petit → GOOD ou GREAT
+            - Si elle se plaint ou exprime de la fatigue → BAD
+            - Analyse le TON, pas juste les mots. "Ça va" dit avec enthousiasme = GOOD, dit avec lassitude = BAD
+
+            TÂCHES :
+            1. Résumé : 2 phrases max
+            2. Mood : UNE valeur parmi [GREAT, GOOD, NEUTRAL, BAD, TERRIBLE] - sois DÉCISIF
+            3. Tags : 3-5 mots-clés
+            4. Action Items : tâches/promesses mentionnées (tableau vide si aucune)
+
+            JSON attendu :
             {
                 "summary": "...",
-                "mood": "...",
+                "mood": "GOOD",
                 "tags": ["..."],
-                "actionItems": [
-                    { "id": "uuid-genere-ici", "text": "Intitulé court de l'action", "completed": false }
-                ]
+                "actionItems": []
             }
-            
-            Conversation:
+
+            Conversation à analyser :
             ${transcript}
           `;
 
@@ -211,48 +223,47 @@ const VoiceSession: React.FC<VoiceSessionProps> = ({ user, onClose }) => {
 
           if (response.text) {
             const analysis = JSON.parse(response.text);
+            console.log('AI Analysis result:', analysis); // Debug log
+
             summary = analysis.summary || summary;
-            mood = analysis.mood as Mood || mood;
+            // Validate mood is a valid enum value
+            if (analysis.mood && Object.values(Mood).includes(analysis.mood)) {
+              mood = analysis.mood as Mood;
+            }
             tags = analysis.tags || tags;
 
-            // Assign action items if present
-            if (analysis.actionItems) {
-              // We will save this in the database.
-              // Note: 'entries' table needs to support this.
-              // We are passing it to the insert below.
-              // Assign action items if present
-              (analysis as any).actionItems = analysis.actionItems.map((item: any) => ({
-                ...item,
-                id: crypto.randomUUID(), // Ensure distinct IDs
-                completed: false
-              }));
+            // Process action items
+            const actionItems = (analysis.actionItems || []).map((item: any) => ({
+              ...item,
+              id: crypto.randomUUID(),
+              completed: false
+            }));
 
-              // Encrypt sensitive data before saving (RGPD compliance)
-              const encryptionKey = await getOrCreateEncryptionKey(user.id);
-              const encryptedSummary = await encrypt(summary, encryptionKey);
-              const encryptedTranscript = await encrypt(transcript || "", encryptionKey);
+            // Encrypt sensitive data before saving (RGPD compliance)
+            const encryptionKey = await getOrCreateEncryptionKey(user.id);
+            const encryptedSummary = await encrypt(summary, encryptionKey);
+            const encryptedTranscript = await encrypt(transcript || "", encryptionKey);
 
-              const { error } = await supabase.from('entries').insert({
-                user_id: user.id,
-                date: new Date().toISOString(),
-                summary: encryptedSummary,
-                transcript: encryptedTranscript,
-                mood: mood,
-                tags: tags,
-                duration_seconds: finalDuration,
-                action_items: (analysis as any).actionItems || []
-              });
+            const { error } = await supabase.from('entries').insert({
+              user_id: user.id,
+              date: new Date().toISOString(),
+              summary: encryptedSummary,
+              transcript: encryptedTranscript,
+              mood: mood,
+              tags: tags,
+              duration_seconds: finalDuration,
+              action_items: actionItems
+            });
 
-              if (error) console.error("Error saving entry:", error);
-              return;
-            }
+            if (error) console.error("Error saving entry:", error);
+            return; // Exit after successful save
           }
         } catch (analysisError) {
           console.error("Analysis failed:", analysisError);
         }
       }
 
-      // Fallback Save - also encrypt sensitive data
+      // Fallback Save - only if analysis failed
       const encryptionKey = await getOrCreateEncryptionKey(user.id);
       const encryptedSummary = await encrypt(summary, encryptionKey);
       const encryptedTranscript = await encrypt(transcript || "", encryptionKey);

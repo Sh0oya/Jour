@@ -121,10 +121,10 @@ const PrivacyPolicy: React.FC<PrivacyPolicyProps> = ({ onClose }) => {
               contactez-nous à :
             </p>
             <a
-              href="mailto:privacy@journaly.app"
+              href="mailto:contact@journaly.fr"
               className="inline-block bg-emerald-100 text-emerald-800 px-4 py-2 rounded-xl font-medium hover:bg-emerald-200 transition"
             >
-              privacy@journaly.app
+              contact@journaly.fr
             </a>
           </section>
         </div>
