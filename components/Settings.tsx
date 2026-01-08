@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { User, UserTier, UserGoal, AIPersonality } from '../types';
 import { useSettings, AVAILABLE_VOICES } from '../contexts/SettingsContext';
-import { Crown, Bell, Moon, LogOut, Check, Sparkles, Target, Mic, Loader2 } from 'lucide-react';
+import { Crown, Bell, Moon, LogOut, Check, Sparkles, Target, Mic, Loader2, Key, Download, Upload, Shield } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { backupEncryptionKey, restoreEncryptionKey } from '../utils/crypto';
 
 interface SettingsProps {
   user: User;
@@ -29,6 +30,37 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
 
   const [loading, setLoading] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const [keyBackup, setKeyBackup] = useState<string | null>(null);
+  const [showKeyRestore, setShowKeyRestore] = useState(false);
+  const [restoreKeyInput, setRestoreKeyInput] = useState('');
+  const [keyMessage, setKeyMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
+
+  const handleExportKey = async () => {
+    try {
+      const key = await backupEncryptionKey(user.id);
+      setKeyBackup(key);
+      // Copy to clipboard
+      await navigator.clipboard.writeText(key);
+      setKeyMessage({ type: 'success', text: 'Clé copiée dans le presse-papier !' });
+      setTimeout(() => setKeyMessage(null), 3000);
+    } catch (error) {
+      setKeyMessage({ type: 'error', text: 'Erreur lors de l\'export' });
+    }
+  };
+
+  const handleRestoreKey = async () => {
+    if (!restoreKeyInput.trim()) return;
+
+    const success = await restoreEncryptionKey(user.id, restoreKeyInput.trim());
+    if (success) {
+      setKeyMessage({ type: 'success', text: 'Clé restaurée ! Rechargez la page.' });
+      setShowKeyRestore(false);
+      setRestoreKeyInput('');
+    } else {
+      setKeyMessage({ type: 'error', text: 'Clé invalide' });
+    }
+    setTimeout(() => setKeyMessage(null), 3000);
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -280,7 +312,76 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
         </div>
       </div>
 
-      {/* Export/Import REMOVED as per user feedback */}
+      {/* Security & Encryption */}
+      <div className="space-y-4">
+        <p className="px-4 text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
+          <Shield size={12} />
+          Sécurité & Chiffrement
+        </p>
+        <div className="bg-white rounded-[2rem] p-6 shadow-sm space-y-4">
+          <div className="flex items-start gap-3 text-sm text-gray-600 bg-emerald-50 p-4 rounded-xl">
+            <Key size={18} className="text-emerald-700 flex-shrink-0 mt-0.5" />
+            <div>
+              <p className="font-medium text-emerald-900">Chiffrement de bout en bout</p>
+              <p className="text-xs mt-1 text-emerald-700/80">
+                Vos transcriptions et résumés sont chiffrés localement. Personne (même nous) ne peut les lire.
+              </p>
+            </div>
+          </div>
+
+          {keyMessage && (
+            <div className={`p-3 rounded-xl text-sm text-center ${keyMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+              {keyMessage.text}
+            </div>
+          )}
+
+          <div className="flex gap-2">
+            <button
+              onClick={handleExportKey}
+              className="flex-1 flex items-center justify-center gap-2 bg-emerald-100 text-emerald-800 px-4 py-3 rounded-xl font-semibold text-sm hover:bg-emerald-200 transition"
+            >
+              <Download size={16} />
+              Sauvegarder ma clé
+            </button>
+            <button
+              onClick={() => setShowKeyRestore(!showKeyRestore)}
+              className="flex-1 flex items-center justify-center gap-2 bg-gray-100 text-gray-700 px-4 py-3 rounded-xl font-semibold text-sm hover:bg-gray-200 transition"
+            >
+              <Upload size={16} />
+              Restaurer
+            </button>
+          </div>
+
+          {keyBackup && (
+            <div className="bg-gray-100 p-3 rounded-xl">
+              <p className="text-xs text-gray-500 mb-2">Votre clé (copiée) :</p>
+              <code className="text-xs break-all text-gray-700">{keyBackup}</code>
+            </div>
+          )}
+
+          {showKeyRestore && (
+            <div className="space-y-2">
+              <input
+                type="text"
+                value={restoreKeyInput}
+                onChange={(e) => setRestoreKeyInput(e.target.value)}
+                placeholder="Collez votre clé ici..."
+                className="w-full p-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+              />
+              <button
+                onClick={handleRestoreKey}
+                className="w-full bg-emerald-800 text-white py-3 rounded-xl font-semibold text-sm hover:bg-emerald-700 transition"
+              >
+                Restaurer la clé
+              </button>
+            </div>
+          )}
+
+          <p className="text-xs text-gray-400 text-center">
+            Sauvegardez votre clé pour accéder à vos données sur un autre appareil.
+          </p>
+        </div>
+      </div>
 
       {/* Logout */}
       <button

@@ -11,6 +11,7 @@ import { Tab, User, UserTier, UserGoal, JournalEntry, Mood } from './types';
 import { supabase } from './lib/supabase';
 import { Loader2 } from 'lucide-react';
 import { SettingsProvider } from './contexts/SettingsContext';
+import { getOrCreateEncryptionKey, decrypt, isEncrypted } from './utils/crypto';
 
 const AppContent: React.FC = () => {
   const [session, setSession] = useState<any>(null);
@@ -91,14 +92,31 @@ const AppContent: React.FC = () => {
           let streak = 0;
 
           if (entryData) {
-            mappedEntries = entryData.map((e: any) => ({
-              id: e.id,
-              date: e.date,
-              summary: e.summary,
-              transcript: e.transcript,
-              mood: e.mood as Mood,
-              tags: e.tags || [],
-              durationSeconds: e.duration_seconds || 0
+            // Get encryption key for decryption
+            const encryptionKey = await getOrCreateEncryptionKey(session.user.id);
+
+            // Map and decrypt entries
+            mappedEntries = await Promise.all(entryData.map(async (e: any) => {
+              let summary = e.summary || '';
+              let transcript = e.transcript || '';
+
+              // Decrypt if encrypted (RGPD compliance)
+              if (isEncrypted(summary)) {
+                summary = await decrypt(summary, encryptionKey);
+              }
+              if (isEncrypted(transcript)) {
+                transcript = await decrypt(transcript, encryptionKey);
+              }
+
+              return {
+                id: e.id,
+                date: e.date,
+                summary,
+                transcript,
+                mood: e.mood as Mood,
+                tags: e.tags || [],
+                durationSeconds: e.duration_seconds || 0
+              };
             }));
 
             // Calculate Stats

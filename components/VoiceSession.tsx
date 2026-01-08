@@ -5,6 +5,7 @@ import { User, UserTier, Mood, AIPersonality } from '../types';
 import { supabase } from '../lib/supabase';
 import { GoogleGenAI, Type } from "@google/genai";
 import { useSettings } from '../contexts/SettingsContext';
+import { getOrCreateEncryptionKey, encrypt } from '../utils/crypto';
 
 interface VoiceSessionProps {
   user: User;
@@ -226,11 +227,16 @@ const VoiceSession: React.FC<VoiceSessionProps> = ({ user, onClose }) => {
                 completed: false
               }));
 
+              // Encrypt sensitive data before saving (RGPD compliance)
+              const encryptionKey = await getOrCreateEncryptionKey(user.id);
+              const encryptedSummary = await encrypt(summary, encryptionKey);
+              const encryptedTranscript = await encrypt(transcript || "", encryptionKey);
+
               const { error } = await supabase.from('entries').insert({
                 user_id: user.id,
                 date: new Date().toISOString(),
-                summary: summary,
-                transcript: transcript || "",
+                summary: encryptedSummary,
+                transcript: encryptedTranscript,
                 mood: mood,
                 tags: tags,
                 duration_seconds: finalDuration,
@@ -246,12 +252,16 @@ const VoiceSession: React.FC<VoiceSessionProps> = ({ user, onClose }) => {
         }
       }
 
-      // Fallback Save
+      // Fallback Save - also encrypt sensitive data
+      const encryptionKey = await getOrCreateEncryptionKey(user.id);
+      const encryptedSummary = await encrypt(summary, encryptionKey);
+      const encryptedTranscript = await encrypt(transcript || "", encryptionKey);
+
       const { error } = await supabase.from('entries').insert({
         user_id: user.id,
         date: new Date().toISOString(),
-        summary: summary,
-        transcript: transcript || "",
+        summary: encryptedSummary,
+        transcript: encryptedTranscript,
         mood: mood,
         tags: tags,
         duration_seconds: finalDuration,
