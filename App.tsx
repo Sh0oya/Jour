@@ -236,7 +236,15 @@ const AppContent: React.FC = () => {
             <Dashboard user={user} entries={entries} onStartSession={handleStartSession} />
           )}
           {activeTab === Tab.HISTORY && (
-            <History entries={entries} user={user} />
+            <History
+              entries={entries}
+              user={user}
+              onEntryUpdate={(updatedEntry) => {
+                setEntries(prev => prev.map(e =>
+                  e.id === updatedEntry.id ? updatedEntry : e
+                ));
+              }}
+            />
           )}
           {activeTab === Tab.ANALYTICS && (
             <Analytics user={user} entries={entries} />

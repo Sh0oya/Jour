@@ -1,17 +1,56 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Calendar, Lock } from 'lucide-react';
-import { JournalEntry, User, UserTier } from '../types';
+import { JournalEntry, User, UserTier, Mood } from '../types';
+import EntryModal from './EntryModal';
 
 interface HistoryProps {
   entries: JournalEntry[];
   user: User;
+  onEntryUpdate?: (updatedEntry: JournalEntry) => void;
 }
 
-const History: React.FC<HistoryProps> = ({ entries, user }) => {
+const getMoodEmoji = (mood: Mood | string) => {
+  switch (mood) {
+    case Mood.GREAT:
+    case 'GREAT':
+      return '🤩';
+    case Mood.GOOD:
+    case 'GOOD':
+      return '🙂';
+    case Mood.NEUTRAL:
+    case 'NEUTRAL':
+      return '😐';
+    case Mood.BAD:
+    case 'BAD':
+      return '😔';
+    case Mood.TERRIBLE:
+    case 'TERRIBLE':
+      return '😢';
+    default:
+      return '🙂';
+  }
+};
+
+const History: React.FC<HistoryProps> = ({ entries, user, onEntryUpdate }) => {
+  const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
+
+  const handleEntryClick = (entry: JournalEntry, isLocked: boolean) => {
+    if (!isLocked) {
+      setSelectedEntry(entry);
+    }
+  };
+
+  const handleEntryUpdate = (updatedEntry: JournalEntry) => {
+    if (onEntryUpdate) {
+      onEntryUpdate(updatedEntry);
+    }
+    setSelectedEntry(null);
+  };
+
   return (
     <div className="pt-4 space-y-4">
       <h2 className="text-lg font-semibold text-emerald-900 px-2">Your Journal</h2>
-      
+
       <div className="space-y-4">
         {entries.map((entry, index) => {
           // Logic: Free users only see top 3 entries unlocked
@@ -28,39 +67,64 @@ const History: React.FC<HistoryProps> = ({ entries, user }) => {
                     <p className="text-xs text-emerald-800/60 mt-1">Unlock full history</p>
                  </div>
                )}
-               
-               <div className={`bg-white p-5 rounded-[2rem] shadow-sm transition-all ${isLocked ? 'opacity-50' : 'hover:shadow-md'}`}>
+
+               <button
+                 onClick={() => handleEntryClick(entry, isLocked)}
+                 className={`w-full text-left bg-white p-5 rounded-[2rem] shadow-sm transition-all ${
+                   isLocked ? 'opacity-50 cursor-not-allowed' : 'hover:shadow-md hover:scale-[1.01] cursor-pointer active:scale-[0.99]'
+                 }`}
+               >
                  <div className="flex justify-between items-center mb-3">
                     <div className="flex items-center gap-2 text-gray-500">
                        <Calendar size={14} />
-                       <span className="text-xs font-medium">{new Date(entry.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                       <span className="text-xs font-medium">
+                         {new Date(entry.date).toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}
+                       </span>
                     </div>
-                    <div className="text-xl">{entry.mood === 'GREAT' ? '🤩' : entry.mood === 'GOOD' ? '🙂' : '😐'}</div>
+                    <div className="text-xl">{getMoodEmoji(entry.mood)}</div>
                  </div>
-                 
-                 <h3 className="text-emerald-900 font-semibold mb-1">{entry.summary.substring(0, 40)}...</h3>
+
+                 <h3 className="text-emerald-900 font-semibold mb-1">
+                   {entry.summary.length > 50 ? entry.summary.substring(0, 50) + '...' : entry.summary}
+                 </h3>
                  <p className="text-gray-500 text-sm line-clamp-2 leading-relaxed">
                    {entry.transcript}
                  </p>
-                 
+
                  <div className="mt-4 flex flex-wrap gap-2">
-                    {entry.tags.map(tag => (
-                      <span key={tag} className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
+                    {entry.tags.map((tag, idx) => (
+                      <span key={idx} className="text-[10px] text-emerald-700 bg-emerald-50 px-2 py-1 rounded-full border border-emerald-100">
                         #{tag}
                       </span>
                     ))}
                  </div>
-               </div>
+               </button>
             </div>
           );
         })}
       </div>
-      
-      {user.tier === UserTier.FREE && (
+
+      {user.tier === UserTier.FREE && entries.length > 3 && (
         <div className="p-6 text-center">
             <p className="text-sm text-gray-400 mb-2">You've reached the limit of free history.</p>
-            <button className="text-emerald-700 font-semibold text-sm hover:underline">Restore previous entries</button>
+            <button className="text-emerald-700 font-semibold text-sm hover:underline">Unlock full history</button>
         </div>
+      )}
+
+      {entries.length === 0 && (
+        <div className="p-12 text-center">
+          <p className="text-gray-400">Aucune entrée pour le moment.</p>
+          <p className="text-sm text-gray-300 mt-1">Commencez une session vocale !</p>
+        </div>
+      )}
+
+      {/* Entry Modal */}
+      {selectedEntry && (
+        <EntryModal
+          entry={selectedEntry}
+          onClose={() => setSelectedEntry(null)}
+          onUpdate={handleEntryUpdate}
+        />
       )}
     </div>
   );

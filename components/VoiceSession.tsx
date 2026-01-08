@@ -137,148 +137,104 @@ const VoiceSession: React.FC<VoiceSessionProps> = ({ user, onClose }) => {
     return () => clearInterval(durationInterval.current);
   }, [isConnected, maxSessionDuration]);
 
+  // Background analysis function - updates entry after save
+  const analyzeInBackground = async (entryId: string, transcript: string) => {
+    try {
+      const ai = new GoogleGenAI({ apiKey });
+
+      const jsonPrompt = `Analyse cette conversation de journal. Sois DÉCISIF sur le mood.
+MOOD: GREAT=joie/enthousiasme, GOOD=satisfaction/normal, NEUTRAL=factuel uniquement, BAD=frustration/fatigue, TERRIBLE=détresse
+Si la personne parle normalement de sa journée → GOOD (pas neutral). NEUTRAL est RARE.
+
+JSON: {"summary":"2 phrases max","mood":"GOOD","tags":["3-5 mots"],"actionItems":[]}
+
+Conversation: ${transcript}`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.0-flash',
+        contents: jsonPrompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              summary: { type: Type.STRING },
+              mood: { type: Type.STRING, enum: Object.values(Mood) },
+              tags: { type: Type.ARRAY, items: { type: Type.STRING } },
+              actionItems: { type: Type.ARRAY, items: { type: Type.OBJECT, properties: { text: { type: Type.STRING } } } }
+            }
+          }
+        }
+      });
+
+      if (response.text) {
+        const analysis = JSON.parse(response.text);
+        console.log('Background analysis result:', analysis);
+
+        // Encrypt updated summary
+        const encryptionKey = await getOrCreateEncryptionKey(user.id);
+        const encryptedSummary = await encrypt(analysis.summary || "Note vocale", encryptionKey);
+
+        // Validate mood
+        const validMood = Object.values(Mood).includes(analysis.mood) ? analysis.mood : Mood.GOOD;
+
+        // Update entry with analysis results
+        const { error } = await supabase
+          .from('entries')
+          .update({
+            summary: encryptedSummary,
+            mood: validMood,
+            tags: analysis.tags || ['Vocal'],
+            action_items: (analysis.actionItems || []).map((item: any) => ({
+              id: crypto.randomUUID(),
+              text: item.text,
+              completed: false
+            }))
+          })
+          .eq('id', entryId);
+
+        if (error) console.error("Background update error:", error);
+        else console.log('Entry updated with analysis');
+      }
+    } catch (e) {
+      console.error("Background analysis failed:", e);
+    }
+  };
+
   const handleStopAndSave = async () => {
     if (isSaving) return;
     await stop();
     setIsSaving(true);
-    setAnalyzingText(settings.language === 'fr' ? "Analyse en cours..." : "Analyzing...");
-
-    // Artificial wait to let the user feel the "thinking" process (and ensure audio buffer is fully flushed/processed)
-    await new Promise(resolve => setTimeout(resolve, 2000));
+    setAnalyzingText(settings.language === 'fr' ? "Sauvegarde..." : "Saving...");
 
     const finalDuration = Math.max(durationRef.current, duration, 1);
 
     try {
       const transcript = getTranscript();
-      let summary = "Note vocale";
-      let mood = Mood.NEUTRAL;
-      let tags: string[] = ["Vocal"];
 
-      if (transcript && transcript.length > 10) {
-        setAnalyzingText(settings.language === 'fr' ? "Détection des émotions..." : "Detecting emotions...");
-        try {
-          const ai = new GoogleGenAI({ apiKey });
-
-          const jsonPrompt = `
-            Tu es un expert en analyse émotionnelle. Analyse cette conversation de journal intime.
-
-            RÈGLES STRICTES POUR LE MOOD :
-            - GREAT : Enthousiasme, joie, excitation, bonnes nouvelles, accomplissements, gratitude
-            - GOOD : Satisfaction, calme positif, journée correcte, petit plaisir, contentement
-            - NEUTRAL : UNIQUEMENT si vraiment aucune émotion détectable ou sujet 100% factuel/administratif
-            - BAD : Frustration, fatigue, stress, déception, inquiétude, journée difficile
-            - TERRIBLE : Tristesse profonde, colère, détresse, crise, événement grave
-
-            IMPORTANT :
-            - La plupart des gens parlent avec une teinte émotionnelle. NEUTRAL doit être RARE (< 10% des cas).
-            - Si la personne parle de sa journée normalement → GOOD (pas neutral)
-            - Si elle mentionne quelque chose de positif même petit → GOOD ou GREAT
-            - Si elle se plaint ou exprime de la fatigue → BAD
-            - Analyse le TON, pas juste les mots. "Ça va" dit avec enthousiasme = GOOD, dit avec lassitude = BAD
-
-            TÂCHES :
-            1. Résumé : 2 phrases max
-            2. Mood : UNE valeur parmi [GREAT, GOOD, NEUTRAL, BAD, TERRIBLE] - sois DÉCISIF
-            3. Tags : 3-5 mots-clés
-            4. Action Items : tâches/promesses mentionnées (tableau vide si aucune)
-
-            JSON attendu :
-            {
-                "summary": "...",
-                "mood": "GOOD",
-                "tags": ["..."],
-                "actionItems": []
-            }
-
-            Conversation à analyser :
-            ${transcript}
-          `;
-
-          const response = await ai.models.generateContent({
-            model: 'gemini-2.0-flash',
-            contents: jsonPrompt,
-            config: {
-              responseMimeType: 'application/json',
-              responseSchema: {
-                type: Type.OBJECT,
-                properties: {
-                  summary: { type: Type.STRING },
-                  mood: { type: Type.STRING, enum: Object.values(Mood) },
-                  tags: { type: Type.ARRAY, items: { type: Type.STRING } },
-                  actionItems: {
-                    type: Type.ARRAY,
-                    items: {
-                      type: Type.OBJECT,
-                      properties: {
-                        id: { type: Type.STRING },
-                        text: { type: Type.STRING },
-                        completed: { type: Type.BOOLEAN }
-                      }
-                    }
-                  }
-                }
-              }
-            }
-          });
-
-          if (response.text) {
-            const analysis = JSON.parse(response.text);
-            console.log('AI Analysis result:', analysis); // Debug log
-
-            summary = analysis.summary || summary;
-            // Validate mood is a valid enum value
-            if (analysis.mood && Object.values(Mood).includes(analysis.mood)) {
-              mood = analysis.mood as Mood;
-            }
-            tags = analysis.tags || tags;
-
-            // Process action items
-            const actionItems = (analysis.actionItems || []).map((item: any) => ({
-              ...item,
-              id: crypto.randomUUID(),
-              completed: false
-            }));
-
-            // Encrypt sensitive data before saving (RGPD compliance)
-            const encryptionKey = await getOrCreateEncryptionKey(user.id);
-            const encryptedSummary = await encrypt(summary, encryptionKey);
-            const encryptedTranscript = await encrypt(transcript || "", encryptionKey);
-
-            const { error } = await supabase.from('entries').insert({
-              user_id: user.id,
-              date: new Date().toISOString(),
-              summary: encryptedSummary,
-              transcript: encryptedTranscript,
-              mood: mood,
-              tags: tags,
-              duration_seconds: finalDuration,
-              action_items: actionItems
-            });
-
-            if (error) console.error("Error saving entry:", error);
-            return; // Exit after successful save
-          }
-        } catch (analysisError) {
-          console.error("Analysis failed:", analysisError);
-        }
-      }
-
-      // Fallback Save - only if analysis failed
+      // Encrypt data immediately
       const encryptionKey = await getOrCreateEncryptionKey(user.id);
-      const encryptedSummary = await encrypt(summary, encryptionKey);
+      const encryptedSummary = await encrypt("Analyse en cours...", encryptionKey);
       const encryptedTranscript = await encrypt(transcript || "", encryptionKey);
 
-      const { error } = await supabase.from('entries').insert({
+      // SAVE IMMEDIATELY with default mood (GOOD) - no waiting!
+      const { data, error } = await supabase.from('entries').insert({
         user_id: user.id,
         date: new Date().toISOString(),
         summary: encryptedSummary,
         transcript: encryptedTranscript,
-        mood: mood,
-        tags: tags,
+        mood: Mood.GOOD, // Default to GOOD, will be updated by background analysis
+        tags: ['Vocal'],
         duration_seconds: finalDuration,
-      });
+        action_items: []
+      }).select('id').single();
 
-      if (error) console.error("Error saving entry:", error);
+      if (error) {
+        console.error("Error saving entry:", error);
+      } else if (data && transcript && transcript.length > 10) {
+        // Launch background analysis (don't await - fire and forget)
+        analyzeInBackground(data.id, transcript);
+      }
 
     } catch (e) {
       console.error("Save error", e);
