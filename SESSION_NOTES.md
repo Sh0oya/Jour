@@ -5,7 +5,7 @@
 ### 1. Stripe - Gestion d'abonnement
 - [x] Créé Edge Function `create-portal-session` pour le Customer Portal Stripe
 - [x] Modifié `Settings.tsx` pour appeler dynamiquement le portal (plus d'URL test hardcodée)
-- [x] **À configurer** : Déployer la fonction avec `supabase functions deploy create-portal-session`
+- [ ] **À faire** : Déployer la fonction avec `supabase functions deploy create-portal-session`
 
 ### 2. Chiffrement E2E (RGPD)
 - [x] Créé `utils/crypto.ts` avec chiffrement AES-256-GCM
@@ -41,25 +41,45 @@
 - [x] Ajouté support safe-area iOS dans `index.css`
 - [x] Mis à jour `index.html` avec meta tags iOS
 
+### 6. Codemagic - Configuration en cours
+- [x] Repo GitHub connecté : `Sh0oya/Jour`
+- [x] Variables d'environnement configurées (groupe `journaly_env`) :
+  - `VITE_SUPABASE_URL` = `https://lhcyhbudeybjqqjivifq.supabase.co` (non secret)
+  - `VITE_SUPABASE_ANON_KEY` = `***` (secret ✓)
+  - `VITE_GEMINI_API_KEY` = `***` (secret ✓)
+- [x] Inscription Apple Developer Program (99$/an) - **En attente de validation (24-48h)**
+
 ---
 
 ## Ce qu'il reste à faire
 
-### Priorité Haute
+### Priorité Haute - Après validation Apple
 
-#### Codemagic / TestFlight
-- [ ] Créer compte Apple Developer (99$/an) si pas déjà fait
-- [ ] Créer l'app sur App Store Connect (Bundle ID: `com.journaly.app`)
-- [ ] Configurer Codemagic :
-  1. Connecter le repo GitHub `Sh0oya/Jour`
-  2. Ajouter l'intégration "Developer Portal" avec API Key Apple
-  3. Créer l'intégration App Store Connect nommée `Journaly_ASC`
-  4. Configurer les variables d'environnement :
-     - `VITE_SUPABASE_URL`
-     - `VITE_SUPABASE_ANON_KEY`
-     - `VITE_GEMINI_API_KEY`
-- [ ] Lancer le premier build et upload sur TestFlight
-- [ ] Créer groupe "Beta Testers" sur TestFlight
+#### Apple Developer (dès validation reçue)
+1. [ ] **Créer l'App ID** sur developer.apple.com :
+   - Certificates, Identifiers & Profiles → Identifiers → +
+   - Bundle ID : `com.journaly.app`
+   - Capability : Push Notifications ✓
+
+2. [ ] **Créer la clé API** sur appstoreconnect.apple.com :
+   - Users and Access → Integrations → App Store Connect API → +
+   - Name : `Codemagic`
+   - Access : `App Manager`
+   - **Télécharger le .p8** (une seule fois !)
+   - Noter : **Issuer ID** + **Key ID**
+
+3. [ ] **Créer l'app** sur App Store Connect :
+   - Apps → + → New App
+   - Bundle ID : `com.journaly.app`
+   - SKU : `journaly-app`
+
+4. [ ] **Configurer Codemagic** :
+   - Developer Portal → Connecter avec la clé API (.p8)
+   - Nommer l'intégration : `Journaly_ASC`
+
+5. [ ] **Lancer le premier build** → Upload automatique TestFlight
+
+6. [ ] **Créer groupe Beta Testers** sur TestFlight
 
 #### Stripe Production
 - [ ] Déployer Edge Function : `supabase functions deploy create-portal-session`
@@ -123,20 +143,37 @@ Jour/
 │   ├── Auth.tsx               # Login/Signup + RGPD checkbox
 │   ├── Dashboard.tsx          # Accueil + bouton session
 │   ├── History.tsx            # Liste entrées + modal edit
-│   ├── EntryModal.tsx         # NEW: Modal modification mood
+│   ├── EntryModal.tsx         # Modal modification mood
 │   ├── Analytics.tsx          # Graphiques
 │   ├── Settings.tsx           # Paramètres + Stripe + Export clé
 │   ├── VoiceSession.tsx       # Session vocale + save instant
-│   └── PrivacyPolicy.tsx      # NEW: Page confidentialité
+│   └── PrivacyPolicy.tsx      # Page confidentialité
 ├── utils/
-│   ├── crypto.ts              # NEW: Chiffrement E2E AES-256-GCM
+│   ├── crypto.ts              # Chiffrement E2E AES-256-GCM
 │   └── audioUtils.ts
 ├── supabase/functions/
 │   ├── stripe-webhook/        # Webhook Stripe existant
-│   └── create-portal-session/ # NEW: Customer Portal
-├── capacitor.config.ts        # NEW: Config iOS
-└── codemagic.yaml             # NEW: CI/CD iOS
+│   └── create-portal-session/ # Customer Portal
+├── capacitor.config.ts        # Config iOS
+└── codemagic.yaml             # CI/CD iOS
 ```
+
+---
+
+## Configuration Codemagic
+
+### Variables d'environnement (groupe: journaly_env)
+| Variable | Valeur | Secret |
+|----------|--------|--------|
+| `VITE_SUPABASE_URL` | `https://lhcyhbudeybjqqjivifq.supabase.co` | Non |
+| `VITE_SUPABASE_ANON_KEY` | `eyJ...` | Oui ✓ |
+| `VITE_GEMINI_API_KEY` | `AIza...` | Oui ✓ |
+
+### Intégration Apple (à configurer après validation)
+- **Integration name** : `Journaly_ASC`
+- **Issuer ID** : *(à récupérer sur App Store Connect)*
+- **Key ID** : *(à récupérer sur App Store Connect)*
+- **API Key** : *(fichier .p8 à uploader)*
 
 ---
 
@@ -146,4 +183,16 @@ Jour/
 - **Supabase** : https://supabase.com/dashboard/project/lhcyhbudeybjqqjivifq
 - **Stripe Dashboard** : https://dashboard.stripe.com
 - **Codemagic** : https://codemagic.io
+- **Apple Developer** : https://developer.apple.com/account
 - **App Store Connect** : https://appstoreconnect.apple.com
+
+---
+
+## Statut actuel
+
+```
+✅ Code prêt pour iOS
+✅ Codemagic configuré (variables)
+⏳ En attente validation Apple Developer (24-48h)
+⏳ Puis : Config App ID + API Key + Premier build TestFlight
+```
