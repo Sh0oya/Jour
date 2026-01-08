@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { Loader2, ArrowRight, User, Target } from 'lucide-react';
 import { UserGoal } from '../types';
+import PrivacyPolicy from './PrivacyPolicy';
 
 export const Auth: React.FC = () => {
   const [loading, setLoading] = useState(false);
@@ -15,6 +16,7 @@ export const Auth: React.FC = () => {
   const [lastName, setLastName] = useState('');
   const [goal, setGoal] = useState<UserGoal>(UserGoal.JOURNAL);
   const [acceptedRGPD, setAcceptedRGPD] = useState(false);
+  const [showPrivacy, setShowPrivacy] = useState(false);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -160,9 +162,13 @@ export const Auth: React.FC = () => {
                 />
                 <label htmlFor="rgpd" className="text-xs text-emerald-800/80 leading-relaxed cursor-pointer">
                   J'accepte la{' '}
-                  <a href="/privacy" target="_blank" className="text-emerald-700 font-semibold underline hover:text-emerald-900">
+                  <button
+                    type="button"
+                    onClick={() => setShowPrivacy(true)}
+                    className="text-emerald-700 font-semibold underline hover:text-emerald-900"
+                  >
                     politique de confidentialité
-                  </a>{' '}
+                  </button>{' '}
                   et le traitement de mes données vocales. Mes données sont{' '}
                   <span className="font-semibold text-emerald-700">chiffrées de bout en bout</span>.
                 </label>
@@ -198,6 +204,9 @@ export const Auth: React.FC = () => {
           </div>
         </div>
       </div>
+
+      {/* Privacy Policy Modal */}
+      {showPrivacy && <PrivacyPolicy onClose={() => setShowPrivacy(false)} />}
     </div>
   );
 };
