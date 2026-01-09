@@ -8,8 +8,10 @@ workflows:
       app_store_connect: Journaly_ASC
 
     environment:
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.journaly.app
       vars:
-        BUNDLE_ID: "com.journaly.app"
         VITE_SUPABASE_URL: $VITE_SUPABASE_URL
         VITE_SUPABASE_ANON_KEY: $VITE_SUPABASE_ANON_KEY
         VITE_GEMINI_API_KEY: $VITE_GEMINI_API_KEY
@@ -45,25 +47,27 @@ workflows:
         script: |
           /usr/libexec/PlistBuddy -c "Add :NSMicrophoneUsageDescription string 'Journaly needs access to your microphone to record voice journal entries'" ios/App/App/Info.plist || true
 
-      - name: Set up code signing
+      - name: Fetch signing files
+        script: |
+          app-store-connect fetch-signing-files "com.journaly.app" \
+            --type IOS_APP_STORE \
+            --create
+
+      - name: Set up keychain
         script: |
           keychain initialize
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           keychain add-certificates
 
-          # Force manual code signing in Xcode project
-          cd ios/App
-          sed -i '' 's/CODE_SIGN_STYLE = Automatic/CODE_SIGN_STYLE = Manual/g' App.xcodeproj/project.pbxproj
-
-          xcode-project use-profiles --project App.xcodeproj
+      - name: Set up code signing
+        script: |
+          xcode-project use-profiles
 
       - name: Build iOS app
         script: |
           cd ios/App
           xcode-project build-ipa \
             --project App.xcodeproj \
-            --scheme App \
-            --archive-flags="-destination 'generic/platform=iOS'"
+            --scheme App
 
     artifacts:
       - build/ios/ipa/*.ipa
