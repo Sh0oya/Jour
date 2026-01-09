@@ -8,10 +8,10 @@ workflows:
       app_store_connect: Journaly_ASC
 
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.journaly.app
       vars:
+        BUNDLE_ID: "com.journaly.app"
+        XCODE_PROJECT: "ios/App/App.xcodeproj"
+        XCODE_SCHEME: "App"
         VITE_SUPABASE_URL: $VITE_SUPABASE_URL
         VITE_SUPABASE_ANON_KEY: $VITE_SUPABASE_ANON_KEY
         VITE_GEMINI_API_KEY: $VITE_GEMINI_API_KEY
@@ -27,18 +27,15 @@ workflows:
 
     scripts:
       - name: Install Node dependencies
-        script: |
-          npm ci
+        script: npm ci
 
       - name: Build web app
-        script: |
-          npm run build
+        script: npm run build
 
       - name: Sync iOS platform
-        script: |
-          npx cap sync ios
+        script: npx cap sync ios
 
-      - name: Update iOS project settings
+      - name: Update iOS deployment target
         script: |
           cd ios/App
           sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 14.0/g' App.xcodeproj/project.pbxproj
@@ -47,27 +44,26 @@ workflows:
         script: |
           /usr/libexec/PlistBuddy -c "Add :NSMicrophoneUsageDescription string 'Journaly needs access to your microphone to record voice journal entries'" ios/App/App/Info.plist || true
 
-      - name: Fetch signing files
+      - name: Initialize keychain
+        script: keychain initialize
+
+      - name: Fetch signing files from App Store Connect
         script: |
-          app-store-connect fetch-signing-files "com.journaly.app" \
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --create
 
-      - name: Set up keychain
-        script: |
-          keychain initialize
-          keychain add-certificates
+      - name: Add certificates to keychain
+        script: keychain add-certificates
 
-      - name: Set up code signing
-        script: |
-          xcode-project use-profiles
+      - name: Apply provisioning profiles to Xcode project
+        script: xcode-project use-profiles
 
       - name: Build iOS app
         script: |
-          cd ios/App
           xcode-project build-ipa \
-            --project App.xcodeproj \
-            --scheme App
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME"
 
     artifacts:
       - build/ios/ipa/*.ipa
