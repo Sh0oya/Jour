@@ -10,13 +10,11 @@ workflows:
     environment:
       vars:
         BUNDLE_ID: "com.journaly.app"
-        # Ces variables seront configurées dans Codemagic Dashboard
         VITE_SUPABASE_URL: $VITE_SUPABASE_URL
         VITE_SUPABASE_ANON_KEY: $VITE_SUPABASE_ANON_KEY
         VITE_GEMINI_API_KEY: $VITE_GEMINI_API_KEY
       node: 22.0.0
       xcode: latest
-      cocoapods: default
 
     triggering:
       events:
@@ -34,26 +32,18 @@ workflows:
         script: |
           npm run build
 
-      - name: Add iOS platform
+      - name: Sync iOS platform
         script: |
-          npx cap add ios || true
           npx cap sync ios
 
       - name: Update iOS project settings
         script: |
-          # Set iOS deployment target
           cd ios/App
           sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 14.0/g' App.xcodeproj/project.pbxproj
 
       - name: Configure iOS permissions
         script: |
-          # Add microphone permission to Info.plist
           /usr/libexec/PlistBuddy -c "Add :NSMicrophoneUsageDescription string 'Journaly needs access to your microphone to record voice journal entries'" ios/App/App/Info.plist || true
-
-      - name: Install CocoaPods
-        script: |
-          cd ios/App
-          pod install
 
       - name: Set up code signing
         script: |
@@ -66,7 +56,7 @@ workflows:
         script: |
           cd ios/App
           xcode-project build-ipa \
-            --workspace App.xcworkspace \
+            --project App.xcodeproj \
             --scheme App \
             --archive-flags="-destination 'generic/platform=iOS'"
 
