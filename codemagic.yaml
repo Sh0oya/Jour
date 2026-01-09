@@ -8,10 +8,8 @@ workflows:
       app_store_connect: Journaly_ASC
 
     environment:
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.journaly.app
       vars:
+        BUNDLE_ID: "com.journaly.app"
         # Ces variables seront configurées dans Codemagic Dashboard
         VITE_SUPABASE_URL: $VITE_SUPABASE_URL
         VITE_SUPABASE_ANON_KEY: $VITE_SUPABASE_ANON_KEY
@@ -60,7 +58,7 @@ workflows:
       - name: Set up code signing
         script: |
           keychain initialize
-          app-store-connect fetch-signing-files "com.journaly.app" --type IOS_APP_STORE --create
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           keychain add-certificates
           xcode-project use-profiles
 
