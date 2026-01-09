@@ -8,13 +8,12 @@ workflows:
       app_store_connect: Journaly_ASC
 
     environment:
+      groups:
+        - journaly_env
       vars:
         BUNDLE_ID: "com.journaly.app"
         XCODE_PROJECT: "ios/App/App.xcodeproj"
         XCODE_SCHEME: "App"
-        VITE_SUPABASE_URL: $VITE_SUPABASE_URL
-        VITE_SUPABASE_ANON_KEY: $VITE_SUPABASE_ANON_KEY
-        VITE_GEMINI_API_KEY: $VITE_GEMINI_API_KEY
       node: 22.0.0
       xcode: latest
 
