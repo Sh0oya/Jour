@@ -25,15 +25,19 @@ public class StoreKitPlugin: CAPPlugin, CAPBridgedPlugin {
         Task {
             do {
                 let storeProducts = try await Product.products(for: Set(productIds))
-                let products = storeProducts.map { product -> [String: Any] in
-                    return [
+                var products: [[String: Any]] = []
+                for product in storeProducts {
+                    var dict: [String: Any] = [
                         "id": product.id,
                         "title": product.displayName,
                         "description": product.description,
                         "price": product.displayPrice,
                         "priceValue": NSDecimalNumber(decimal: product.price).doubleValue,
-                        "currencyCode": product.priceFormatStyle.currencyCode ?? "USD"
                     ]
+                    if #available(iOS 16.0, *) {
+                        dict["currencyCode"] = product.priceFormatStyle.currencyCode
+                    }
+                    products.append(dict)
                 }
                 call.resolve(["products": products])
             } catch {
@@ -64,17 +68,22 @@ public class StoreKitPlugin: CAPPlugin, CAPBridgedPlugin {
                 case .success(let verification):
                     switch verification {
                     case .verified(let transaction):
-                        // Finish the transaction
                         await transaction.finish()
 
-                        call.resolve([
+                        var response: [String: Any] = [
                             "success": true,
-                            "transactionId": String(transaction.id),
+                            "transactionId": "\(transaction.id)",
                             "productId": transaction.productID,
-                            "expirationDate": transaction.expirationDate?.ISO8601Format() ?? "",
-                            "originalTransactionId": String(transaction.originalID),
-                            "appAccountToken": transaction.appAccountToken?.uuidString ?? ""
-                        ])
+                            "originalTransactionId": "\(transaction.originalID)",
+                        ]
+                        if let expDate = transaction.expirationDate {
+                            let formatter = ISO8601DateFormatter()
+                            response["expirationDate"] = formatter.string(from: expDate)
+                        }
+                        if let token = transaction.appAccountToken {
+                            response["appAccountToken"] = token.uuidString
+                        }
+                        call.resolve(response)
 
                     case .unverified(_, let error):
                         call.reject("Transaction unverified: \(error.localizedDescription)")
@@ -110,15 +119,19 @@ public class StoreKitPlugin: CAPPlugin, CAPBridgedPlugin {
 
                 var activeSubscriptions: [[String: Any]] = []
 
-                for await result in Transaction.currentEntitlements {
-                    if case .verified(let transaction) = result {
+                for await verificationResult in Transaction.currentEntitlements {
+                    if case .verified(let transaction) = verificationResult {
                         if transaction.productType == .autoRenewable {
-                            activeSubscriptions.append([
+                            var sub: [String: Any] = [
                                 "productId": transaction.productID,
-                                "expirationDate": transaction.expirationDate?.ISO8601Format() ?? "",
-                                "transactionId": String(transaction.id),
-                                "originalTransactionId": String(transaction.originalID)
-                            ])
+                                "transactionId": "\(transaction.id)",
+                                "originalTransactionId": "\(transaction.originalID)",
+                            ]
+                            if let expDate = transaction.expirationDate {
+                                let formatter = ISO8601DateFormatter()
+                                sub["expirationDate"] = formatter.string(from: expDate)
+                            }
+                            activeSubscriptions.append(sub)
                         }
                     }
                 }
@@ -139,15 +152,19 @@ public class StoreKitPlugin: CAPPlugin, CAPBridgedPlugin {
         Task {
             var entitlements: [[String: Any]] = []
 
-            for await result in Transaction.currentEntitlements {
-                if case .verified(let transaction) = result {
-                    entitlements.append([
+            for await verificationResult in Transaction.currentEntitlements {
+                if case .verified(let transaction) = verificationResult {
+                    var entry: [String: Any] = [
                         "productId": transaction.productID,
-                        "productType": String(describing: transaction.productType),
-                        "expirationDate": transaction.expirationDate?.ISO8601Format() ?? "",
-                        "transactionId": String(transaction.id),
-                        "isUpgraded": transaction.isUpgraded
-                    ])
+                        "productType": "\(transaction.productType)",
+                        "transactionId": "\(transaction.id)",
+                        "isUpgraded": transaction.isUpgraded,
+                    ]
+                    if let expDate = transaction.expirationDate {
+                        let formatter = ISO8601DateFormatter()
+                        entry["expirationDate"] = formatter.string(from: expDate)
+                    }
+                    entitlements.append(entry)
                 }
             }
 
