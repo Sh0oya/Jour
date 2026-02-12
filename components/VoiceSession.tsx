@@ -80,7 +80,7 @@ const VoiceSession: React.FC<VoiceSessionProps> = ({ user, onClose }) => {
     return base;
   };
 
-  const { isConnected, isSpeaking, start, stop, currentVolume, error, getTranscript } = useGeminiLive({
+  const { isConnected, isSpeaking, start, stop, currentVolume, error, getTranscript, warmUp } = useGeminiLive({
     apiKey,
     systemInstruction: getSystemInstruction(),
     voiceName: settings.voiceName,
@@ -90,6 +90,12 @@ const VoiceSession: React.FC<VoiceSessionProps> = ({ user, onClose }) => {
   const durationInterval = useRef<any>(undefined);
   const durationRef = useRef<number>(0);
   const [limitReached, setLimitReached] = useState(false);
+
+  // Warm up AudioContext immediately on mount (while still in user gesture context)
+  // This ensures iOS allows AudioContext creation since VoiceSession is opened via a tap
+  useEffect(() => {
+    warmUp();
+  }, []);
 
   // Determine Ad based on Tier
   useEffect(() => {
@@ -151,7 +157,7 @@ JSON: {"summary":"2 phrases max","mood":"GOOD","tags":["3-5 mots"],"actionItems"
 Conversation: ${transcript}`;
 
       const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-flash',
         contents: jsonPrompt,
         config: {
           responseMimeType: 'application/json',

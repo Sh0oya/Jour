@@ -35,7 +35,7 @@ export const useGeminiLive = ({ apiKey, systemInstruction, voiceName = 'Puck', v
   const currentOutputTransRef = useRef<string>("");
 
   // Initialize Audio Contexts
-  const ensureAudioContexts = useCallback(() => {
+  const ensureAudioContexts = useCallback(async () => {
     if (!inputContextRef.current) {
       inputContextRef.current = new (window.AudioContext || (window as any).webkitAudioContext)({
         sampleRate: INPUT_SAMPLE_RATE,
@@ -47,6 +47,13 @@ export const useGeminiLive = ({ apiKey, systemInstruction, voiceName = 'Puck', v
       });
       outputNodeRef.current = outputContextRef.current.createGain();
       outputNodeRef.current.connect(outputContextRef.current.destination);
+    }
+    // iOS requires explicit resume from user gesture context
+    if (inputContextRef.current.state === 'suspended') {
+      await inputContextRef.current.resume();
+    }
+    if (outputContextRef.current.state === 'suspended') {
+      await outputContextRef.current.resume();
     }
   }, []);
 
@@ -98,19 +105,15 @@ export const useGeminiLive = ({ apiKey, systemInstruction, voiceName = 'Puck', v
     transcriptRef.current = ""; // Reset transcript
 
     try {
-      ensureAudioContexts();
-      
-      // Resume contexts if suspended
-      if (inputContextRef.current?.state === 'suspended') await inputContextRef.current.resume();
-      if (outputContextRef.current?.state === 'suspended') await outputContextRef.current.resume();
+      await ensureAudioContexts();
 
       // Get Mic Stream
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } });
       
       const ai = new GoogleGenAI({ apiKey });
       
       const sessionPromise = ai.live.connect({
-        model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+        model: 'gemini-2.5-flash-native-audio-preview-12-2025',
         config: {
           responseModalities: [Modality.AUDIO],
           inputAudioTranscription: {},
@@ -144,7 +147,7 @@ export const useGeminiLive = ({ apiKey, systemInstruction, voiceName = 'Puck', v
 
               const pcmBlob = createPcmBlob(inputData);
               sessionPromise.then(session => {
-                  session.sendRealtimeInput({ media: pcmBlob });
+                  session.sendRealtimeInput({ audio: pcmBlob });
               });
             };
 
@@ -188,9 +191,9 @@ export const useGeminiLive = ({ apiKey, systemInstruction, voiceName = 'Puck', v
             }
             
             // Handle Transcription
-            if (msg.serverContent?.outputTranscription) {
+            if (msg.serverContent?.outputTranscription?.text) {
                currentOutputTransRef.current += msg.serverContent.outputTranscription.text;
-            } else if (msg.serverContent?.inputTranscription) {
+            } else if (msg.serverContent?.inputTranscription?.text) {
                currentInputTransRef.current += msg.serverContent.inputTranscription.text;
             }
 
@@ -244,6 +247,19 @@ export const useGeminiLive = ({ apiKey, systemInstruction, voiceName = 'Puck', v
     };
   }, []);
 
+  // Warm up AudioContext from user gesture context (iOS requirement)
+  const warmUp = useCallback(async () => {
+    try {
+      await ensureAudioContexts();
+      console.log('AudioContext warmed up', {
+        input: inputContextRef.current?.state,
+        output: outputContextRef.current?.state
+      });
+    } catch (e) {
+      console.error('AudioContext warmup failed', e);
+    }
+  }, [ensureAudioContexts]);
+
   return {
     isConnected,
     isSpeaking,
@@ -251,6 +267,7 @@ export const useGeminiLive = ({ apiKey, systemInstruction, voiceName = 'Puck', v
     stop,
     error,
     currentVolume,
+    warmUp,
     getTranscript: () => transcriptRef.current // Expose transcript getter
   };
 };

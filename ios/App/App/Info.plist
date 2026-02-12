@@ -47,5 +47,7 @@
 	</array>
 	<key>UIViewControllerBasedStatusBarAppearance</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Journaly needs access to your microphone to record voice journal entries with June, your AI companion.</string>
 </dict>
 </plist>

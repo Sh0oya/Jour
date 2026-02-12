@@ -1,4 +1,8 @@
-import { Blob } from '@google/genai';
+// Matches the shape expected by session.sendRealtimeInput({ audio: ... })
+interface MediaBlob {
+  data: string;
+  mimeType: string;
+}
 
 export function base64ToUint8Array(base64: string): Uint8Array {
   const binaryString = atob(base64);
@@ -20,7 +24,7 @@ export function arrayBufferToBase64(buffer: ArrayBuffer): string {
   return btoa(binary);
 }
 
-export function createPcmBlob(data: Float32Array): Blob {
+export function createPcmBlob(data: Float32Array): MediaBlob {
   const l = data.length;
   const int16 = new Int16Array(l);
   for (let i = 0; i < l; i++) {

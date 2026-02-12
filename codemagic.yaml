@@ -25,6 +25,12 @@ workflows:
           include: true
 
     scripts:
+      - name: Create env file for Vite build
+        script: |
+          echo "VITE_GEMINI_API_KEY=$VITE_GEMINI_API_KEY" > .env.local
+          echo "VITE_SUPABASE_URL=$VITE_SUPABASE_URL" >> .env.local
+          echo "VITE_SUPABASE_ANON_KEY=$VITE_SUPABASE_ANON_KEY" >> .env.local
+
       - name: Install Node dependencies
         script: npm ci
 
@@ -37,7 +43,7 @@ workflows:
       - name: Update iOS deployment target
         script: |
           cd ios/App
-          sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 14.0/g' App.xcodeproj/project.pbxproj
+          sed -i '' 's/IPHONEOS_DEPLOYMENT_TARGET = [0-9.]*/IPHONEOS_DEPLOYMENT_TARGET = 15.0/g' App.xcodeproj/project.pbxproj
 
       - name: Configure iOS permissions
         script: |

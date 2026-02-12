@@ -16,7 +16,9 @@ const config: CapacitorConfig = {
       '*.stripe.com',
       'www.ppc-digital.fr',
       'fonts.googleapis.com',
-      'fonts.gstatic.com'
+      'fonts.gstatic.com',
+      'generativelanguage.googleapis.com',
+      '*.googleapis.com'
     ]
   }
 };
