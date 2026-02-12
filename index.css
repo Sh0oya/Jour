@@ -9,16 +9,21 @@
   --radius-4xl: 2.5rem;
 }
 
+html, body {
+  height: 100%;
+  overflow: hidden;
+}
+
 body {
   font-family: 'Inter', sans-serif;
   background-color: #EAF2F0;
   color: #1F2937;
   transition: background-color 0.3s, color 0.3s;
-  /* iOS Safe Area support */
-  padding-top: env(safe-area-inset-top);
-  padding-bottom: env(safe-area-inset-bottom);
-  padding-left: env(safe-area-inset-left);
-  padding-right: env(safe-area-inset-right);
+}
+
+#root {
+  height: 100%;
+  overflow: hidden;
 }
 
 /* Dark Mode */

@@ -139,6 +139,22 @@ export const translations = {
     back: "Retour",
     ad_free_version: "Publicité (Version Gratuite)",
 
+    // Nav
+    nav_home: "Accueil",
+    nav_history: "Journal",
+    nav_insight: "Insight",
+
+    // Auth extras
+    new_here: "Nouveau ? Créer un profil",
+    have_account: "Déjà un compte ? Se connecter",
+    audio_companion: "Votre compagnon audio intelligent",
+    accept_privacy: "J'accepte la",
+    privacy_policy: "politique de confidentialité",
+    privacy_suffix: "et le traitement de mes données vocales. Mes données sont",
+    privacy_e2e: "chiffrées de bout en bout",
+    name_required: "Le prénom et le nom sont requis.",
+    privacy_required: "Vous devez accepter la politique de confidentialité.",
+
     // Common
     loading: "Chargement...",
     guest: "Invité",
@@ -280,6 +296,22 @@ export const translations = {
     limit_reached_title: "Limit reached",
     back: "Back",
     ad_free_version: "Ad (Free Version)",
+
+    // Nav
+    nav_home: "Home",
+    nav_history: "History",
+    nav_insight: "Insight",
+
+    // Auth extras
+    new_here: "New here? Create profile",
+    have_account: "Have an account? Sign In",
+    audio_companion: "Your intelligent audio companion",
+    accept_privacy: "I accept the",
+    privacy_policy: "privacy policy",
+    privacy_suffix: "and the processing of my voice data. My data is",
+    privacy_e2e: "end-to-end encrypted",
+    name_required: "First name and last name are required.",
+    privacy_required: "You must accept the privacy policy.",
 
     // Common
     loading: "Loading...",

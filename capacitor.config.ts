@@ -13,7 +13,10 @@ const config: CapacitorConfig = {
     // Allow loading from Supabase and Stripe
     allowNavigation: [
       'lhcyhbudeybjqqjivifq.supabase.co',
-      '*.stripe.com'
+      '*.stripe.com',
+      'www.ppc-digital.fr',
+      'fonts.googleapis.com',
+      'fonts.gstatic.com'
     ]
   }
 };

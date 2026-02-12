@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { Loader2, ArrowRight, User, Target } from 'lucide-react';
+import { Loader2, ArrowRight, Target } from 'lucide-react';
 import { UserGoal } from '../types';
 import PrivacyPolicy from './PrivacyPolicy';
+import { useSettings } from '../contexts/SettingsContext';
 
 export const Auth: React.FC = () => {
+  const { t } = useSettings();
   const [loading, setLoading] = useState(false);
   const [isLogin, setIsLogin] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -33,10 +35,10 @@ export const Auth: React.FC = () => {
       } else {
         // Sign Up with Metadata
         if (!firstName || !lastName) {
-          throw new Error("First name and Last name are required.");
+          throw new Error(t('name_required'));
         }
         if (!acceptedRGPD) {
-          throw new Error("Vous devez accepter la politique de confidentialité.");
+          throw new Error(t('privacy_required'));
         }
 
         const { error } = await supabase.auth.signUp({
@@ -61,20 +63,24 @@ export const Auth: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-mint-50 flex flex-col items-center justify-center p-6 text-emerald-900">
+    <div className="h-full bg-mint-50 flex flex-col items-center justify-center p-6 text-emerald-900 overflow-y-auto" style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}>
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
           <img
-            src="https://www.ppc-digital.fr/wp-content/uploads/2025/12/Design-sans-titre-1-1.png"
+            src="/journaly-logo.png"
             alt="Journaly Logo"
             className="w-48 h-auto mx-auto mb-6 drop-shadow-sm"
+            onError={(e) => {
+              // Fallback to remote if local not found
+              (e.target as HTMLImageElement).src = 'https://www.ppc-digital.fr/wp-content/uploads/2025/12/Design-sans-titre-1-1.png';
+            }}
           />
-          <p className="text-emerald-800/60">Your intelligent audio companion</p>
+          <p className="text-emerald-800/60">{t('audio_companion')}</p>
         </div>
 
         <div className="bg-white p-8 rounded-[2.5rem] shadow-xl">
           <h2 className="text-2xl font-semibold mb-6 text-center">
-            {isLogin ? 'Welcome back' : 'Create profile'}
+            {isLogin ? t('welcome_back') : t('create_profile')}
           </h2>
 
           <form onSubmit={handleAuth} className="space-y-4">
@@ -84,7 +90,7 @@ export const Auth: React.FC = () => {
               <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 ml-3">First Name</label>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 ml-3">{t('firstname')}</label>
                     <input
                       type="text"
                       value={firstName}
@@ -95,7 +101,7 @@ export const Auth: React.FC = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 ml-3">Last Name</label>
+                    <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 ml-3">{t('lastname')}</label>
                     <input
                       type="text"
                       value={lastName}
@@ -108,7 +114,7 @@ export const Auth: React.FC = () => {
                 </div>
 
                 <div>
-                  <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 ml-3">Objective</label>
+                  <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 ml-3">{t('objective')}</label>
                   <div className="relative">
                     <Target size={16} className="absolute left-4 top-1/2 -translate-y-1/2 text-emerald-700" />
                     <select
@@ -127,7 +133,7 @@ export const Auth: React.FC = () => {
 
             {/* Common Fields */}
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 ml-3">Email</label>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 ml-3">{t('email')}</label>
               <input
                 type="email"
                 value={email}
@@ -139,7 +145,7 @@ export const Auth: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 ml-3">Password</label>
+              <label className="block text-[10px] font-bold uppercase tracking-wider text-gray-400 mb-1 ml-3">{t('password')}</label>
               <input
                 type="password"
                 value={password}
@@ -161,16 +167,16 @@ export const Auth: React.FC = () => {
                   className="mt-1 w-5 h-5 rounded-lg border-2 border-emerald-300 text-emerald-600 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer"
                 />
                 <label htmlFor="rgpd" className="text-xs text-emerald-800/80 leading-relaxed cursor-pointer">
-                  J'accepte la{' '}
+                  {t('accept_privacy')}{' '}
                   <button
                     type="button"
                     onClick={() => setShowPrivacy(true)}
                     className="text-emerald-700 font-semibold underline hover:text-emerald-900"
                   >
-                    politique de confidentialité
+                    {t('privacy_policy')}
                   </button>{' '}
-                  et le traitement de mes données vocales. Mes données sont{' '}
-                  <span className="font-semibold text-emerald-700">chiffrées de bout en bout</span>.
+                  {t('privacy_suffix')}{' '}
+                  <span className="font-semibold text-emerald-700">{t('privacy_e2e')}</span>.
                 </label>
               </div>
             )}
@@ -188,7 +194,7 @@ export const Auth: React.FC = () => {
             >
               {loading ? <Loader2 className="animate-spin" /> : (
                 <>
-                  {isLogin ? 'Sign In' : 'Start Journey'} <ArrowRight size={20} />
+                  {isLogin ? t('signin') : t('start_journey')} <ArrowRight size={20} />
                 </>
               )}
             </button>
@@ -199,7 +205,7 @@ export const Auth: React.FC = () => {
               onClick={() => setIsLogin(!isLogin)}
               className="text-sm text-emerald-700 font-medium hover:underline"
             >
-              {isLogin ? "New here? Create profile" : "Have an account? Sign In"}
+              {isLogin ? t('new_here') : t('have_account')}
             </button>
           </div>
         </div>

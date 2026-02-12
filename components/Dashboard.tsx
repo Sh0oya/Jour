@@ -47,7 +47,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartSession, entries = [
   const lastEntry = entries.length > 0 ? entries[0] : null;
 
   return (
-    <div className="space-y-6 pt-6 pb-24">
+    <div className="space-y-6 pt-6 pb-4">
 
       {/* Header */}
       <div className="px-2">
