@@ -1,14 +1,57 @@
 /**
- * In-App Purchase hook for iOS (cordova-plugin-purchase v13)
- * Handles subscription purchase, restore, and receipt validation.
+ * In-App Purchase hook for iOS (native StoreKit 2)
+ * Handles subscription purchase, restore, and tier sync.
  *
  * On web: does nothing (Stripe is used instead)
- * On iOS: manages StoreKit subscriptions via CdvPurchase
+ * On iOS: manages StoreKit 2 subscriptions via custom Capacitor plugin
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react';
-import { Capacitor } from '@capacitor/core';
+import { Capacitor, registerPlugin } from '@capacitor/core';
 import { supabase, SUPABASE_URL } from '../lib/supabase';
+
+// Register native StoreKit plugin (only works on iOS)
+interface StoreKitPluginInterface {
+  getProducts(options: { productIds: string[] }): Promise<{
+    products: Array<{
+      id: string;
+      title: string;
+      description: string;
+      price: string;
+      priceValue: number;
+      currencyCode: string;
+    }>;
+  }>;
+  purchase(options: { productId: string }): Promise<{
+    success: boolean;
+    cancelled?: boolean;
+    pending?: boolean;
+    transactionId?: string;
+    productId?: string;
+    expirationDate?: string;
+    originalTransactionId?: string;
+  }>;
+  restorePurchases(): Promise<{
+    success: boolean;
+    subscriptions: Array<{
+      productId: string;
+      expirationDate: string;
+      transactionId: string;
+      originalTransactionId: string;
+    }>;
+  }>;
+  getCurrentEntitlements(): Promise<{
+    entitlements: Array<{
+      productId: string;
+      productType: string;
+      expirationDate: string;
+      transactionId: string;
+      isUpgraded: boolean;
+    }>;
+  }>;
+}
+
+const StoreKit = registerPlugin<StoreKitPluginInterface>('StoreKitPlugin');
 
 // Product IDs matching App Store Connect
 const PRODUCT_IDS = {
@@ -33,13 +76,33 @@ export interface UseIAPReturn {
   restore: () => Promise<void>;
 }
 
+async function syncTierWithServer(productId: string): Promise<void> {
+  try {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.access_token) return;
+
+    await fetch(`${SUPABASE_URL}/functions/v1/verify-apple-receipt`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        receipt: 'storekit2',
+        productId,
+      }),
+    });
+  } catch (err) {
+    console.error('Tier sync error:', err);
+  }
+}
+
 export function useIAP(userId: string): UseIAPReturn {
   const isNative = Capacitor.isNativePlatform();
   const [products, setProducts] = useState<IAPProduct[]>([]);
   const [loading, setLoading] = useState(true);
   const [purchasing, setPurchasing] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const storeRef = useRef<any>(null);
   const initializedRef = useRef(false);
 
   useEffect(() => {
@@ -48,191 +111,75 @@ export function useIAP(userId: string): UseIAPReturn {
       return;
     }
 
-    // Wait for deviceready event (Cordova plugins load after this)
-    const init = () => {
-      const CdvPurchase = (window as any).CdvPurchase;
-      if (!CdvPurchase) {
-        console.warn('CdvPurchase not available');
+    const loadProducts = async () => {
+      try {
+        const result = await StoreKit.getProducts({
+          productIds: [PRODUCT_IDS.monthly, PRODUCT_IDS.yearly],
+        });
+
+        const loaded: IAPProduct[] = result.products.map((p) => ({
+          id: p.id,
+          title: p.title,
+          price: p.price,
+          description: p.description,
+        }));
+
+        setProducts(loaded);
+        initializedRef.current = true;
+      } catch (err: any) {
+        console.error('Failed to load products:', err);
+      } finally {
         setLoading(false);
-        return;
       }
-
-      const { store, ProductType, Platform } = CdvPurchase;
-      storeRef.current = store;
-
-      // Register products
-      store.register([
-        {
-          id: PRODUCT_IDS.monthly,
-          type: ProductType.PAID_SUBSCRIPTION,
-          platform: Platform.APPLE_APPSTORE,
-        },
-        {
-          id: PRODUCT_IDS.yearly,
-          type: ProductType.PAID_SUBSCRIPTION,
-          platform: Platform.APPLE_APPSTORE,
-        },
-      ]);
-
-      // Set up server-side receipt validator
-      store.validator = async (receipt: any, callback: any) => {
-        try {
-          const { data: { session } } = await supabase.auth.getSession();
-          const token = session?.access_token;
-
-          const response = await fetch(
-            `${SUPABASE_URL}/functions/v1/verify-apple-receipt`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${token}`,
-              },
-              body: JSON.stringify({
-                receipt: receipt.nativeData,
-                productId: receipt.products?.[0]?.id,
-              }),
-            }
-          );
-
-          const result = await response.json();
-
-          if (result.ok) {
-            callback({
-              ok: true,
-              data: { id: receipt.id, latest_receipt: true },
-            });
-          } else {
-            callback({
-              ok: false,
-              data: { error: result.error || 'Validation failed' },
-            });
-          }
-        } catch (err: any) {
-          console.error('Receipt validation error:', err);
-          callback({
-            ok: false,
-            data: { error: err.message },
-          });
-        }
-      };
-
-      // Event listeners
-      store.when()
-        .productUpdated(() => {
-          updateProducts(store);
-        })
-        .approved((transaction: any) => {
-          // Transaction approved, verify receipt
-          transaction.verify();
-        })
-        .verified((receipt: any) => {
-          // Receipt verified by our server, finish the transaction
-          receipt.finish();
-        })
-        .finished((transaction: any) => {
-          console.log('Transaction finished:', transaction.products?.[0]?.id);
-          setPurchasing(false);
-          setError(null);
-        })
-        .receiptUpdated((receipt: any) => {
-          // Check if user has an active subscription
-          updateProducts(store);
-        });
-
-      // Error handling
-      store.error((err: any) => {
-        console.error('Store error:', err);
-        if (err.code !== 'CdvPurchase.PAYMENT_CANCELLED') {
-          setError(err.message || 'Purchase failed');
-        }
-        setPurchasing(false);
-      });
-
-      // Initialize the store
-      store.initialize([Platform.APPLE_APPSTORE])
-        .then(() => {
-          updateProducts(store);
-          setLoading(false);
-          initializedRef.current = true;
-        })
-        .catch((err: any) => {
-          console.error('Store init failed:', err);
-          setLoading(false);
-        });
     };
 
-    // Cordova plugins are available after deviceready
-    if ((window as any).cordova) {
-      document.addEventListener('deviceready', init, false);
-    } else {
-      // Fallback: try after a short delay (Capacitor sometimes loads faster)
-      setTimeout(init, 500);
-    }
+    loadProducts();
   }, [isNative, userId]);
 
-  const updateProducts = (store: any) => {
-    const loaded: IAPProduct[] = [];
-
-    [PRODUCT_IDS.monthly, PRODUCT_IDS.yearly].forEach((pid) => {
-      const product = store.get(pid);
-      if (product) {
-        const offer = product.getOffer();
-        loaded.push({
-          id: product.id,
-          title: product.title || product.id,
-          price: offer?.pricingPhases?.[0]?.price || product.price || '',
-          description: product.description || '',
-        });
-      }
-    });
-
-    if (loaded.length > 0) {
-      setProducts(loaded);
-    }
-  };
-
   const purchase = useCallback(async (productId: string) => {
-    const store = storeRef.current;
-    if (!store) return;
+    if (!isNative) return;
 
     setError(null);
     setPurchasing(true);
 
-    const product = store.get(productId);
-    const offer = product?.getOffer();
-
-    if (!offer) {
-      setError('Product not available');
-      setPurchasing(false);
-      return;
-    }
-
     try {
-      await offer.order();
-    } catch (err: any) {
-      if (err.code !== 'CdvPurchase.PAYMENT_CANCELLED') {
-        setError(err.message || 'Purchase failed');
+      const result = await StoreKit.purchase({ productId });
+
+      if (result.success) {
+        // Transaction verified by StoreKit 2, sync tier with our server
+        await syncTierWithServer(productId);
+      } else if (result.cancelled) {
+        // User cancelled, no error to show
+      } else if (result.pending) {
+        setError('Purchase pending approval');
       }
+    } catch (err: any) {
+      setError(err.message || 'Purchase failed');
+    } finally {
       setPurchasing(false);
     }
-  }, []);
+  }, [isNative]);
 
   const restore = useCallback(async () => {
-    const store = storeRef.current;
-    if (!store) return;
+    if (!isNative) return;
 
     setError(null);
     setPurchasing(true);
 
     try {
-      await store.restorePurchases();
-      setPurchasing(false);
+      const result = await StoreKit.restorePurchases();
+
+      if (result.success && result.subscriptions.length > 0) {
+        // Sync the most recent subscription with our server
+        const latest = result.subscriptions[0];
+        await syncTierWithServer(latest.productId);
+      }
     } catch (err: any) {
       setError(err.message || 'Restore failed');
+    } finally {
       setPurchasing(false);
     }
-  }, []);
+  }, [isNative]);
 
   return {
     isNative,

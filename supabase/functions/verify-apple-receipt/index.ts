@@ -138,6 +138,48 @@ Deno.serve(async (req) => {
 
     console.log(`Verifying receipt for user ${user.id}`)
 
+    const productId = body.productId
+
+    // StoreKit 2 flow: transaction already verified on-device
+    // Just update the user's tier
+    if (receiptData === 'storekit2') {
+      if (!productId || !VALID_PRODUCT_IDS.includes(productId)) {
+        return new Response(
+          JSON.stringify({ ok: false, error: 'Invalid product ID' }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      const { error: updateError } = await supabaseAdmin
+        .from('profiles')
+        .update({
+          tier: 'PRO',
+          subscription_status: 'active',
+        })
+        .eq('id', user.id)
+
+      if (updateError) {
+        console.error('Error updating profile:', updateError)
+        return new Response(
+          JSON.stringify({ ok: false, error: 'Failed to update profile' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        )
+      }
+
+      console.log(`User ${user.id} → tier: PRO (StoreKit 2, product: ${productId})`)
+
+      return new Response(
+        JSON.stringify({
+          ok: true,
+          tier: 'PRO',
+          subscriptionStatus: 'active',
+          productId,
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
+    // Legacy flow: verify receipt with Apple's servers
     // 3. Verify receipt with Apple
     const verifyResult = await verifyWithApple(receiptData)
 
