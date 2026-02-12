@@ -1,17 +1,24 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense, lazy } from 'react';
 import Layout from './components/Layout';
 import Dashboard from './components/Dashboard';
-import History from './components/History';
-import Analytics from './components/Analytics';
-import Settings from './components/Settings';
-import VoiceSession from './components/VoiceSession';
 import { Auth } from './components/Auth';
+
+const History = lazy(() => import('./components/History'));
+const Analytics = lazy(() => import('./components/Analytics'));
+const Settings = lazy(() => import('./components/Settings'));
+const VoiceSession = lazy(() => import('./components/VoiceSession'));
 
 import { Tab, User, UserTier, UserGoal, JournalEntry, Mood } from './types';
 import { supabase } from './lib/supabase';
 import { Loader2 } from 'lucide-react';
 import { SettingsProvider } from './contexts/SettingsContext';
 import { getOrCreateEncryptionKey, decrypt, isEncrypted } from './utils/crypto';
+
+const LazyFallback = () => (
+  <div className="flex items-center justify-center py-12">
+    <Loader2 className="animate-spin text-emerald-800" size={24} />
+  </div>
+);
 
 const AppContent: React.FC = () => {
   const [session, setSession] = useState<any>(null);
@@ -115,7 +122,8 @@ const AppContent: React.FC = () => {
                 transcript,
                 mood: e.mood as Mood,
                 tags: e.tags || [],
-                durationSeconds: e.duration_seconds || 0
+                durationSeconds: e.duration_seconds || 0,
+                actionItems: e.action_items || []
               };
             }));
 
@@ -202,16 +210,6 @@ const AppContent: React.FC = () => {
     setIsSessionActive(false);
   };
 
-  const handleToggleTier = async () => {
-    const newTier = user.tier === UserTier.FREE ? UserTier.PRO : UserTier.FREE;
-
-    // Update both Auth and DB Profile
-    await supabase.auth.updateUser({ data: { tier: newTier } });
-    await supabase.from('profiles').update({ tier: newTier }).eq('id', user.id);
-
-    // Optimistic UI Update
-    setUser(prev => ({ ...prev, tier: newTier }));
-  };
 
   if (loading) {
     return (
@@ -229,29 +227,34 @@ const AppContent: React.FC = () => {
       {!session ? (
         <Auth />
       ) : isSessionActive ? (
-        <VoiceSession user={user} onClose={handleEndSession} />
+        <Suspense fallback={<LazyFallback />}>
+          <VoiceSession user={user} onClose={handleEndSession} />
+        </Suspense>
       ) : (
         <Layout activeTab={activeTab} onTabChange={setActiveTab} user={user}>
           {activeTab === Tab.DASHBOARD && (
             <Dashboard user={user} entries={entries} onStartSession={handleStartSession} />
           )}
-          {activeTab === Tab.HISTORY && (
-            <History
-              entries={entries}
-              user={user}
-              onEntryUpdate={(updatedEntry) => {
-                setEntries(prev => prev.map(e =>
-                  e.id === updatedEntry.id ? updatedEntry : e
-                ));
-              }}
-            />
-          )}
-          {activeTab === Tab.ANALYTICS && (
-            <Analytics user={user} entries={entries} />
-          )}
-          {activeTab === Tab.SETTINGS && (
-            <Settings user={user} onToggleTier={handleToggleTier} />
-          )}
+          <Suspense fallback={<LazyFallback />}>
+            {activeTab === Tab.HISTORY && (
+              <History
+                entries={entries}
+                user={user}
+                onEntryUpdate={(updatedEntry) => {
+                  setEntries(prev => prev.map(e =>
+                    e.id === updatedEntry.id ? updatedEntry : e
+                  ));
+                }}
+                onUpgrade={() => setActiveTab(Tab.SETTINGS)}
+              />
+            )}
+            {activeTab === Tab.ANALYTICS && (
+              <Analytics user={user} entries={entries} onUpgrade={() => setActiveTab(Tab.SETTINGS)} />
+            )}
+            {activeTab === Tab.SETTINGS && (
+              <Settings user={user} />
+            )}
+          </Suspense>
         </Layout>
       )}
     </>

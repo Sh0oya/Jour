@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, Calendar, Clock } from 'lucide-react';
 import { JournalEntry, Mood } from '../types';
 import { supabase } from '../lib/supabase';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface EntryModalProps {
   entry: JournalEntry;
@@ -9,17 +10,18 @@ interface EntryModalProps {
   onUpdate: (updatedEntry: JournalEntry) => void;
 }
 
-const MOOD_OPTIONS = [
-  { value: Mood.GREAT, emoji: '🤩', label: 'Super', color: 'bg-green-500' },
-  { value: Mood.GOOD, emoji: '🙂', label: 'Bien', color: 'bg-emerald-500' },
-  { value: Mood.NEUTRAL, emoji: '😐', label: 'Neutre', color: 'bg-gray-400' },
-  { value: Mood.BAD, emoji: '😔', label: 'Pas top', color: 'bg-orange-500' },
-  { value: Mood.TERRIBLE, emoji: '😢', label: 'Difficile', color: 'bg-red-500' },
-];
-
 const EntryModal: React.FC<EntryModalProps> = ({ entry, onClose, onUpdate }) => {
   const [selectedMood, setSelectedMood] = useState<Mood>(entry.mood);
   const [saving, setSaving] = useState(false);
+  const { t, settings } = useSettings();
+
+  const MOOD_OPTIONS = [
+    { value: Mood.GREAT, emoji: '🤩', label: t('mood_great'), color: 'bg-green-500' },
+    { value: Mood.GOOD, emoji: '🙂', label: t('mood_good'), color: 'bg-emerald-500' },
+    { value: Mood.NEUTRAL, emoji: '😐', label: t('mood_neutral'), color: 'bg-gray-400' },
+    { value: Mood.BAD, emoji: '😔', label: t('mood_bad'), color: 'bg-orange-500' },
+    { value: Mood.TERRIBLE, emoji: '😢', label: t('mood_terrible'), color: 'bg-red-500' },
+  ];
 
   const handleSaveMood = async () => {
     if (selectedMood === entry.mood) {
@@ -48,7 +50,7 @@ const EntryModal: React.FC<EntryModalProps> = ({ entry, onClose, onUpdate }) => 
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('fr-FR', {
+    return new Date(dateStr).toLocaleDateString(settings.language === 'fr' ? 'fr-FR' : 'en-US', {
       weekday: 'long',
       day: 'numeric',
       month: 'long',
@@ -69,7 +71,7 @@ const EntryModal: React.FC<EntryModalProps> = ({ entry, onClose, onUpdate }) => 
         {/* Header */}
         <div className="p-6 border-b border-gray-100 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-bold text-emerald-900">Modifier l'entrée</h2>
+            <h2 className="text-lg font-bold text-emerald-900">{t('edit_entry')}</h2>
             <div className="flex items-center gap-3 mt-1 text-xs text-gray-500">
               <span className="flex items-center gap-1">
                 <Calendar size={12} />
@@ -93,13 +95,13 @@ const EntryModal: React.FC<EntryModalProps> = ({ entry, onClose, onUpdate }) => 
         <div className="p-6 overflow-y-auto space-y-6">
           {/* Summary */}
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Résumé</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">{t('summary')}</p>
             <p className="text-emerald-900 bg-mint-50 p-4 rounded-xl">{entry.summary}</p>
           </div>
 
           {/* Mood Selector */}
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">Comment te sentais-tu ?</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-3">{t('how_feeling')}</p>
             <div className="grid grid-cols-5 gap-2">
               {MOOD_OPTIONS.map((option) => (
                 <button
@@ -125,7 +127,7 @@ const EntryModal: React.FC<EntryModalProps> = ({ entry, onClose, onUpdate }) => 
           {/* Tags */}
           {entry.tags && entry.tags.length > 0 && (
             <div>
-              <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Tags</p>
+              <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">{t('tags')}</p>
               <div className="flex flex-wrap gap-2">
                 {entry.tags.map((tag, idx) => (
                   <span
@@ -141,9 +143,9 @@ const EntryModal: React.FC<EntryModalProps> = ({ entry, onClose, onUpdate }) => 
 
           {/* Transcript Preview */}
           <div>
-            <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">Transcription</p>
+            <p className="text-xs font-bold uppercase tracking-wider text-gray-400 mb-2">{t('transcription')}</p>
             <p className="text-sm text-gray-600 bg-gray-50 p-4 rounded-xl line-clamp-4">
-              {entry.transcript || "Aucune transcription disponible"}
+              {entry.transcript || t('no_transcript')}
             </p>
           </div>
         </div>
@@ -154,14 +156,14 @@ const EntryModal: React.FC<EntryModalProps> = ({ entry, onClose, onUpdate }) => 
             onClick={onClose}
             className="flex-1 py-3 rounded-xl font-semibold text-gray-600 bg-gray-100 hover:bg-gray-200 transition"
           >
-            Annuler
+            {t('cancel')}
           </button>
           <button
             onClick={handleSaveMood}
             disabled={saving}
             className="flex-1 py-3 rounded-xl font-semibold text-white bg-emerald-800 hover:bg-emerald-700 transition disabled:opacity-50"
           >
-            {saving ? 'Sauvegarde...' : 'Enregistrer'}
+            {saving ? t('saving') : t('save')}
           </button>
         </div>
       </div>

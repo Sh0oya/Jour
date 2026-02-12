@@ -7,9 +7,10 @@ import { useSettings } from '../contexts/SettingsContext';
 interface AnalyticsProps {
   user: User;
   entries: JournalEntry[];
+  onUpgrade?: () => void;
 }
 
-const Analytics: React.FC<AnalyticsProps> = ({ user, entries }) => {
+const Analytics: React.FC<AnalyticsProps> = ({ user, entries, onUpgrade }) => {
   const isLocked = user.tier === UserTier.FREE;
   const { t } = useSettings();
 
@@ -104,13 +105,13 @@ const Analytics: React.FC<AnalyticsProps> = ({ user, entries }) => {
 
   return (
     <div className="pt-4 space-y-6 pb-24">
-      <h2 className="text-lg font-semibold text-emerald-900 px-2">{t('mood_today')} Analysis</h2>
+      <h2 className="text-lg font-semibold text-emerald-900 px-2">{t('mood_today')}</h2>
 
       {/* Main Trend Chart */}
       <div className="relative bg-white p-6 rounded-[2.5rem] shadow-sm h-80 flex flex-col">
         <div className="flex justify-between items-center mb-6">
           <div>
-            <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">Weekly Trend</p>
+            <p className="text-gray-400 text-xs font-bold uppercase tracking-wider">{t('weekly_trend')}</p>
             <div className="flex items-center gap-2">
               <h3 className="text-2xl font-bold text-emerald-900">{moodDescription}</h3>
               <TrendingUp size={20} className="text-green-500" />
@@ -118,7 +119,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ user, entries }) => {
           </div>
           <div className="text-right">
             <p className="text-3xl font-bold text-emerald-800">{avgScore}</p>
-            <p className="text-xs text-gray-400">Avg Score</p>
+            <p className="text-xs text-gray-400">{t('avg_score')}</p>
           </div>
         </div>
 
@@ -178,7 +179,7 @@ const Analytics: React.FC<AnalyticsProps> = ({ user, entries }) => {
               {tag.name}
             </span>
           ))}
-          {topTags.length === 0 && <p className="text-gray-400 text-sm italic">Pas assez de données...</p>}
+          {topTags.length === 0 && <p className="text-gray-400 text-sm italic">{t('not_enough_data')}</p>}
         </div>
       </div>
 
@@ -189,10 +190,13 @@ const Analytics: React.FC<AnalyticsProps> = ({ user, entries }) => {
             <div className="bg-emerald-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 text-emerald-700">
               <Lock size={32} />
             </div>
-            <h2 className="text-2xl font-bold text-emerald-900 mb-2">Analytics Pro</h2>
-            <p className="text-gray-600 mb-6">Débloquez les analyses détaillées de vos émotions et thèmes pour mieux vous comprendre.</p>
-            <button className="bg-emerald-800 text-white px-8 py-3 rounded-xl font-bold w-full hover:bg-emerald-900 transition">
-              Passer PRO
+            <h2 className="text-2xl font-bold text-emerald-900 mb-2">{t('analytics_pro')}</h2>
+            <p className="text-gray-600 mb-6">{t('analytics_pro_desc')}</p>
+            <button
+              onClick={onUpgrade}
+              className="bg-emerald-800 text-white px-8 py-3 rounded-xl font-bold w-full hover:bg-emerald-900 transition"
+            >
+              {t('upgrade_pro')}
             </button>
           </div>
         </div>

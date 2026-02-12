@@ -2,12 +2,11 @@ import React, { useState } from 'react';
 import { User, UserTier, UserGoal, AIPersonality } from '../types';
 import { useSettings, AVAILABLE_VOICES } from '../contexts/SettingsContext';
 import { Crown, Bell, Moon, LogOut, Check, Sparkles, Target, Mic, Loader2, Key, Download, Upload, Shield } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { supabase, SUPABASE_URL } from '../lib/supabase';
 import { backupEncryptionKey, restoreEncryptionKey } from '../utils/crypto';
 
 interface SettingsProps {
   user: User;
-  onToggleTier: () => void;
 }
 
 // RESTORED: Stripe Payment Links
@@ -16,7 +15,7 @@ const STRIPE_LINKS = {
   yearly: 'https://buy.stripe.com/fZu28rejg67R9sNf477ok01',
 };
 
-const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
+const Settings: React.FC<SettingsProps> = ({ user }) => {
   const {
     settings,
     setDarkMode,
@@ -39,12 +38,11 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
     try {
       const key = await backupEncryptionKey(user.id);
       setKeyBackup(key);
-      // Copy to clipboard
       await navigator.clipboard.writeText(key);
-      setKeyMessage({ type: 'success', text: 'Clé copiée dans le presse-papier !' });
+      setKeyMessage({ type: 'success', text: t('key_copied') });
       setTimeout(() => setKeyMessage(null), 3000);
     } catch (error) {
-      setKeyMessage({ type: 'error', text: 'Erreur lors de l\'export' });
+      setKeyMessage({ type: 'error', text: t('key_export_error') });
     }
   };
 
@@ -53,11 +51,11 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
 
     const success = await restoreEncryptionKey(user.id, restoreKeyInput.trim());
     if (success) {
-      setKeyMessage({ type: 'success', text: 'Clé restaurée ! Rechargez la page.' });
+      setKeyMessage({ type: 'success', text: t('key_restored') });
       setShowKeyRestore(false);
       setRestoreKeyInput('');
     } else {
-      setKeyMessage({ type: 'error', text: 'Clé invalide' });
+      setKeyMessage({ type: 'error', text: t('key_invalid') });
     }
     setTimeout(() => setKeyMessage(null), 3000);
   };
@@ -84,7 +82,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
       }
 
       const response = await fetch(
-        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/create-portal-session`,
+        `${SUPABASE_URL}/functions/v1/create-portal-session`,
         {
           method: 'POST',
           headers: {
@@ -135,7 +133,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
           <div className="flex justify-between items-start mb-4">
             <div>
               <h2 className="text-lg font-bold opacity-90">{t('member_status')}</h2>
-              <p className="text-emerald-100/80 text-sm">Passez à la vitesse supérieure.</p>
+              <p className="text-emerald-100/80 text-sm">{t('upgrade_subtitle')}</p>
             </div>
             <div className="px-3 py-1 bg-white/20 backdrop-blur-sm rounded-full text-xs font-bold uppercase tracking-wider">
               {user.tier === UserTier.PRO ? t('pro') : t('free')}
@@ -149,7 +147,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
               className="bg-white text-emerald-900 px-6 py-3 rounded-xl font-bold text-sm shadow-md active:scale-95 transition-transform flex items-center gap-2 disabled:opacity-70"
             >
               {portalLoading && <Loader2 size={14} className="animate-spin" />}
-              Gérer abonnement
+              {t('manage_subscription')}
             </button>
           ) : (
             <div className="flex gap-2">
@@ -158,14 +156,14 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
                 className="flex-1 bg-white text-emerald-900 px-4 py-3 rounded-xl font-bold text-xs shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2"
               >
                 {loading === 'monthly' && <Loader2 size={12} className="animate-spin" />}
-                Mensuel (6.90€)
+                {t('monthly')} (6.90€)
               </button>
               <button
                 onClick={() => handleStripeCheckout('yearly')}
                 className="flex-1 bg-emerald-400 text-emerald-950 px-4 py-3 rounded-xl font-bold text-xs shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2"
               >
                 {loading === 'yearly' && <Loader2 size={12} className="animate-spin" />}
-                Annuel (70€)
+                {t('yearly')} (70€)
               </button>
             </div>
           )}
@@ -177,7 +175,7 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
 
       {/* Identity (Read Only for now) */}
       <div className="space-y-4">
-        <p className="px-4 text-[10px] font-bold uppercase tracking-wider text-gray-400">Identité</p>
+        <p className="px-4 text-[10px] font-bold uppercase tracking-wider text-gray-400">{t('identity')}</p>
         <div className="bg-white rounded-[1.5rem] p-4 shadow-sm space-y-4">
           <div className="flex items-center justify-between">
             <span className="font-semibold text-emerald-900">{t('firstname')}</span>
@@ -316,15 +314,15 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
       <div className="space-y-4">
         <p className="px-4 text-[10px] font-bold uppercase tracking-wider text-gray-400 flex items-center gap-2">
           <Shield size={12} />
-          Sécurité & Chiffrement
+          {t('security_encryption')}
         </p>
         <div className="bg-white rounded-[2rem] p-6 shadow-sm space-y-4">
           <div className="flex items-start gap-3 text-sm text-gray-600 bg-emerald-50 p-4 rounded-xl">
             <Key size={18} className="text-emerald-700 flex-shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-emerald-900">Chiffrement de bout en bout</p>
+              <p className="font-medium text-emerald-900">{t('e2e_encryption')}</p>
               <p className="text-xs mt-1 text-emerald-700/80">
-                Vos transcriptions et résumés sont chiffrés localement. Personne (même nous) ne peut les lire.
+                {t('e2e_description')}
               </p>
             </div>
           </div>
@@ -341,20 +339,20 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
               className="flex-1 flex items-center justify-center gap-2 bg-emerald-100 text-emerald-800 px-4 py-3 rounded-xl font-semibold text-sm hover:bg-emerald-200 transition"
             >
               <Download size={16} />
-              Sauvegarder ma clé
+              {t('backup_key')}
             </button>
             <button
               onClick={() => setShowKeyRestore(!showKeyRestore)}
               className="flex-1 flex items-center justify-center gap-2 bg-gray-100 text-gray-700 px-4 py-3 rounded-xl font-semibold text-sm hover:bg-gray-200 transition"
             >
               <Upload size={16} />
-              Restaurer
+              {t('restore_key')}
             </button>
           </div>
 
           {keyBackup && (
             <div className="bg-gray-100 p-3 rounded-xl">
-              <p className="text-xs text-gray-500 mb-2">Votre clé (copiée) :</p>
+              <p className="text-xs text-gray-500 mb-2">{t('your_key')}</p>
               <code className="text-xs break-all text-gray-700">{keyBackup}</code>
             </div>
           )}
@@ -365,20 +363,20 @@ const Settings: React.FC<SettingsProps> = ({ user, onToggleTier }) => {
                 type="text"
                 value={restoreKeyInput}
                 onChange={(e) => setRestoreKeyInput(e.target.value)}
-                placeholder="Collez votre clé ici..."
+                placeholder={t('paste_key_placeholder')}
                 className="w-full p-3 rounded-xl border border-gray-200 text-sm focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
               />
               <button
                 onClick={handleRestoreKey}
                 className="w-full bg-emerald-800 text-white py-3 rounded-xl font-semibold text-sm hover:bg-emerald-700 transition"
               >
-                Restaurer la clé
+                {t('restore_key_action')}
               </button>
             </div>
           )}
 
           <p className="text-xs text-gray-400 text-center">
-            Sauvegardez votre clé pour accéder à vos données sur un autre appareil.
+            {t('key_backup_hint')}
           </p>
         </div>
       </div>

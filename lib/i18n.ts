@@ -67,6 +67,75 @@ export const translations = {
     g_work: "Travail",
     g_other: "Autre",
 
+    // Settings - Subscription
+    upgrade_subtitle: "Passez à la vitesse supérieure.",
+    manage_subscription: "Gérer abonnement",
+    monthly: "Mensuel",
+    yearly: "Annuel",
+    identity: "Identité",
+    security_encryption: "Sécurité & Chiffrement",
+    e2e_encryption: "Chiffrement de bout en bout",
+    e2e_description: "Vos transcriptions et résumés sont chiffrés localement. Personne (même nous) ne peut les lire.",
+    backup_key: "Sauvegarder ma clé",
+    restore_key: "Restaurer",
+    restore_key_action: "Restaurer la clé",
+    key_copied: "Clé copiée dans le presse-papier !",
+    key_restored: "Clé restaurée ! Rechargez la page.",
+    key_invalid: "Clé invalide",
+    key_export_error: "Erreur lors de l'export",
+    paste_key_placeholder: "Collez votre clé ici...",
+    key_backup_hint: "Sauvegardez votre clé pour accéder à vos données sur un autre appareil.",
+    your_key: "Votre clé (copiée) :",
+
+    // History
+    your_journal: "Ton Journal",
+    pro_feature: "Fonctionnalité Pro",
+    unlock_history: "Débloquer l'historique",
+    history_limit: "Tu as atteint la limite de l'historique gratuit.",
+    no_entries: "Aucune entrée pour le moment.",
+    start_session_hint: "Commencez une session vocale !",
+
+    // Entry Modal
+    edit_entry: "Modifier l'entrée",
+    summary: "Résumé",
+    how_feeling: "Comment te sentais-tu ?",
+    tags: "Tags",
+    transcription: "Transcription",
+    no_transcript: "Aucune transcription disponible",
+    cancel: "Annuler",
+    save: "Enregistrer",
+    saving: "Sauvegarde...",
+    mood_great: "Super",
+    mood_good: "Bien",
+    mood_neutral: "Neutre",
+    mood_bad: "Pas top",
+    mood_terrible: "Difficile",
+
+    // Analytics
+    analytics_pro: "Analytics Pro",
+    analytics_pro_desc: "Débloquez les analyses détaillées de vos émotions et thèmes pour mieux vous comprendre.",
+    upgrade_pro: "Passer PRO",
+    weekly_trend: "Tendance Hebdo",
+    avg_score: "Score Moy.",
+    not_enough_data: "Pas assez de données...",
+    no_tags_yet: "Pas encore de tags",
+
+    // Dashboard
+    daily_allowance: "Temps Journalier",
+    remaining: "restants",
+    limit_free: "Limite : 30s.",
+    upgrade_for_20m: "Passer PRO pour 20m.",
+    pro_plan: "Plan PRO : 20m/jour.",
+    limit_reached: "Limite Atteinte",
+
+    // Voice Session
+    live: "En direct",
+    connecting: "Connexion...",
+    listening: "À l'écoute...",
+    limit_reached_title: "Limite atteinte",
+    back: "Retour",
+    ad_free_version: "Publicité (Version Gratuite)",
+
     // Common
     loading: "Chargement...",
     guest: "Invité",
@@ -136,6 +205,75 @@ export const translations = {
     g_discipline: "Discipline",
     g_work: "Work",
     g_other: "Other",
+
+    // Settings - Subscription
+    upgrade_subtitle: "Take it to the next level.",
+    manage_subscription: "Manage subscription",
+    monthly: "Monthly",
+    yearly: "Yearly",
+    identity: "Identity",
+    security_encryption: "Security & Encryption",
+    e2e_encryption: "End-to-end encryption",
+    e2e_description: "Your transcripts and summaries are encrypted locally. Nobody (not even us) can read them.",
+    backup_key: "Backup my key",
+    restore_key: "Restore",
+    restore_key_action: "Restore key",
+    key_copied: "Key copied to clipboard!",
+    key_restored: "Key restored! Reload the page.",
+    key_invalid: "Invalid key",
+    key_export_error: "Export error",
+    paste_key_placeholder: "Paste your key here...",
+    key_backup_hint: "Backup your key to access your data on another device.",
+    your_key: "Your key (copied):",
+
+    // History
+    your_journal: "Your Journal",
+    pro_feature: "Pro Feature",
+    unlock_history: "Unlock full history",
+    history_limit: "You've reached the free history limit.",
+    no_entries: "No entries yet.",
+    start_session_hint: "Start a voice session!",
+
+    // Entry Modal
+    edit_entry: "Edit entry",
+    summary: "Summary",
+    how_feeling: "How were you feeling?",
+    tags: "Tags",
+    transcription: "Transcription",
+    no_transcript: "No transcription available",
+    cancel: "Cancel",
+    save: "Save",
+    saving: "Saving...",
+    mood_great: "Great",
+    mood_good: "Good",
+    mood_neutral: "Neutral",
+    mood_bad: "Not great",
+    mood_terrible: "Difficult",
+
+    // Analytics
+    analytics_pro: "Analytics Pro",
+    analytics_pro_desc: "Unlock detailed analysis of your emotions and themes to better understand yourself.",
+    upgrade_pro: "Upgrade to PRO",
+    weekly_trend: "Weekly Trend",
+    avg_score: "Avg Score",
+    not_enough_data: "Not enough data...",
+    no_tags_yet: "No tags yet",
+
+    // Dashboard
+    daily_allowance: "Daily Allowance",
+    remaining: "remaining",
+    limit_free: "Limit: 30s.",
+    upgrade_for_20m: "Upgrade to PRO for 20m.",
+    pro_plan: "PRO Plan: 20m/day.",
+    limit_reached: "Limit Reached",
+
+    // Voice Session
+    live: "Live",
+    connecting: "Connecting...",
+    listening: "Listening...",
+    limit_reached_title: "Limit reached",
+    back: "Back",
+    ad_free_version: "Ad (Free Version)",
 
     // Common
     loading: "Loading...",

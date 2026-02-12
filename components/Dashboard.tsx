@@ -62,9 +62,9 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartSession, entries = [
       {/* Usage Limit Bar (Restored) */}
       <div className="bg-white px-5 py-4 rounded-[2rem] shadow-sm flex flex-col gap-2">
         <div className="flex justify-between items-center text-xs font-bold uppercase tracking-wider text-gray-400">
-          <span className="flex items-center gap-1"><Clock size={12} /> {settings.language === 'fr' ? 'Temps Journalier' : 'Daily Allowance'}</span>
+          <span className="flex items-center gap-1"><Clock size={12} /> {t('daily_allowance')}</span>
           <span className={isLimitReached ? "text-red-500" : "text-emerald-600"}>
-            {formatTime(remainingSeconds)} {settings.language === 'fr' ? 'restants' : 'remaining'}
+            {formatTime(remainingSeconds)} {t('remaining')}
           </span>
         </div>
         <div className="h-3 w-full bg-gray-100 rounded-full overflow-hidden">
@@ -75,11 +75,11 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartSession, entries = [
         </div>
         {user.tier === UserTier.FREE ? (
           <p className="text-[10px] text-center text-gray-400 mt-1">
-            Limit: 30s. <span className="text-emerald-600 font-bold">Passer PRO pour 20m.</span>
+            {t('limit_free')} <span className="text-emerald-600 font-bold">{t('upgrade_for_20m')}</span>
           </p>
         ) : (
           <p className="text-[10px] text-center text-gray-400 mt-1">
-            PRO Plan : 20m/day.
+            {t('pro_plan')}
           </p>
         )}
       </div>
@@ -109,7 +109,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartSession, entries = [
               disabled={isLimitReached}
               className={`mt-2 bg-white text-emerald-900 px-8 py-4 rounded-full font-bold shadow-lg hover:scale-105 active:scale-95 transition-all flex items-center gap-2 ${isLimitReached ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
-              {isLimitReached ? (settings.language === 'fr' ? 'Limite Atteinte' : 'Limit Reached') : t('start_call')}
+              {isLimitReached ? t('limit_reached') : t('start_call')}
             </button>
           </div>
         </div>
@@ -164,7 +164,7 @@ const Dashboard: React.FC<DashboardProps> = ({ user, onStartSession, entries = [
               <span key={i} className="bg-emerald-50 text-emerald-800 text-[10px] font-bold px-3 py-1.5 rounded-full">{tag}</span>
             ))}
             {entries.flatMap(e => e.tags || []).length === 0 && (
-              <span className="text-gray-300 text-xs italic">Pas encore de tags</span>
+              <span className="text-gray-300 text-xs italic">{t('no_tags_yet')}</span>
             )}
           </div>
         </div>
@@ -205,17 +205,8 @@ const ActionItemsWidget: React.FC<{ entries: JournalEntry[] }> = ({ entries }) =
   React.useEffect(() => {
     const allItems: any[] = [];
     entries.forEach(entry => {
-      // Fallback for snake_case from DB
-      if ((entry as any).action_items && Array.isArray((entry as any).action_items)) {
-        (entry as any).action_items.forEach((item: any) => {
-          if (!item.completed) {
-            allItems.push({ ...item, entryId: entry.id });
-          }
-        });
-      }
-      // Handle camelCase from types
       if (entry.actionItems && Array.isArray(entry.actionItems)) {
-        entry.actionItems.forEach((item: any) => {
+        entry.actionItems.forEach((item) => {
           if (!item.completed) {
             allItems.push({ ...item, entryId: entry.id });
           }
@@ -233,8 +224,8 @@ const ActionItemsWidget: React.FC<{ entries: JournalEntry[] }> = ({ entries }) =
     // Find entry and update DB
     const entry = entries.find(e => e.id === entryId);
     if (entry) {
-      const actionItems = entry.action_items || entry.actionItems || [];
-      const updatedItems = actionItems.map((i: any) =>
+      const actionItems = entry.actionItems || [];
+      const updatedItems = actionItems.map((i) =>
         i.id === itemId ? { ...i, completed: true } : i
       );
 

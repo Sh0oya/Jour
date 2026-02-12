@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { Calendar, Lock } from 'lucide-react';
 import { JournalEntry, User, UserTier, Mood } from '../types';
 import EntryModal from './EntryModal';
+import { useSettings } from '../contexts/SettingsContext';
 
 interface HistoryProps {
   entries: JournalEntry[];
   user: User;
   onEntryUpdate?: (updatedEntry: JournalEntry) => void;
+  onUpgrade?: () => void;
 }
 
 const getMoodEmoji = (mood: Mood | string) => {
@@ -31,8 +33,9 @@ const getMoodEmoji = (mood: Mood | string) => {
   }
 };
 
-const History: React.FC<HistoryProps> = ({ entries, user, onEntryUpdate }) => {
+const History: React.FC<HistoryProps> = ({ entries, user, onEntryUpdate, onUpgrade }) => {
   const [selectedEntry, setSelectedEntry] = useState<JournalEntry | null>(null);
+  const { t } = useSettings();
 
   const handleEntryClick = (entry: JournalEntry, isLocked: boolean) => {
     if (!isLocked) {
@@ -49,7 +52,7 @@ const History: React.FC<HistoryProps> = ({ entries, user, onEntryUpdate }) => {
 
   return (
     <div className="pt-4 space-y-4">
-      <h2 className="text-lg font-semibold text-emerald-900 px-2">Your Journal</h2>
+      <h2 className="text-lg font-semibold text-emerald-900 px-2">{t('your_journal')}</h2>
 
       <div className="space-y-4">
         {entries.map((entry, index) => {
@@ -63,8 +66,8 @@ const History: React.FC<HistoryProps> = ({ entries, user, onEntryUpdate }) => {
                     <div className="bg-emerald-900 text-white p-3 rounded-full mb-2 shadow-lg">
                        <Lock size={20} />
                     </div>
-                    <p className="text-xs font-bold text-emerald-900 uppercase tracking-wide">Pro Feature</p>
-                    <p className="text-xs text-emerald-800/60 mt-1">Unlock full history</p>
+                    <p className="text-xs font-bold text-emerald-900 uppercase tracking-wide">{t('pro_feature')}</p>
+                    <p className="text-xs text-emerald-800/60 mt-1">{t('unlock_history')}</p>
                  </div>
                )}
 
@@ -106,15 +109,15 @@ const History: React.FC<HistoryProps> = ({ entries, user, onEntryUpdate }) => {
 
       {user.tier === UserTier.FREE && entries.length > 3 && (
         <div className="p-6 text-center">
-            <p className="text-sm text-gray-400 mb-2">You've reached the limit of free history.</p>
-            <button className="text-emerald-700 font-semibold text-sm hover:underline">Unlock full history</button>
+            <p className="text-sm text-gray-400 mb-2">{t('history_limit')}</p>
+            <button onClick={onUpgrade} className="text-emerald-700 font-semibold text-sm hover:underline">{t('unlock_history')}</button>
         </div>
       )}
 
       {entries.length === 0 && (
         <div className="p-12 text-center">
-          <p className="text-gray-400">Aucune entrée pour le moment.</p>
-          <p className="text-sm text-gray-300 mt-1">Commencez une session vocale !</p>
+          <p className="text-gray-400">{t('no_entries')}</p>
+          <p className="text-sm text-gray-300 mt-1">{t('start_session_hint')}</p>
         </div>
       )}
 

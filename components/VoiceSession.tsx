@@ -255,8 +255,8 @@ Conversation: ${transcript}`;
     return (
       <div className="absolute inset-0 z-50 bg-emerald-900 flex flex-col items-center justify-center text-white p-8 text-center">
         <Lock size={48} className="mb-4 text-emerald-300" />
-        <h2 className="text-2xl font-bold">Limite atteinte</h2>
-        <button onClick={onClose} className="mt-8 bg-white text-emerald-900 px-6 py-3 rounded-xl font-bold">Retour</button>
+        <h2 className="text-2xl font-bold">{settings.language === 'fr' ? 'Limite atteinte' : 'Limit reached'}</h2>
+        <button onClick={onClose} className="mt-8 bg-white text-emerald-900 px-6 py-3 rounded-xl font-bold">{settings.language === 'fr' ? 'Retour' : 'Back'}</button>
       </div>
     );
   }
@@ -265,7 +265,7 @@ Conversation: ${transcript}`;
     return (
       <div className="absolute inset-0 z-50 bg-emerald-900 flex flex-col items-center justify-center text-white">
         <div className="text-4xl font-bold animate-pulse">{adTimer}</div>
-        <p className="mt-4 opacity-50">Publicité (Version Gratuite)</p>
+        <p className="mt-4 opacity-50">{settings.language === 'fr' ? 'Publicité (Version Gratuite)' : 'Ad (Free Version)'}</p>
       </div>
     );
   }
@@ -274,7 +274,7 @@ Conversation: ${transcript}`;
     <div className="absolute inset-0 z-50 bg-gradient-to-b from-emerald-800 to-emerald-900 text-white flex flex-col">
       <div className="p-6 flex justify-between items-center">
         <div className="flex items-center gap-2">
-          <div className={`w - 2 h - 2 rounded - full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'} `}></div>
+          <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-400 animate-pulse' : 'bg-red-400'}`}></div>
           <span className="text-sm font-medium opacity-80">{isConnected ? (settings.language === 'fr' ? 'En direct' : 'Live') : 'Connexion...'}</span>
         </div>
         <button onClick={() => handleStopAndSave()} className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition">
@@ -289,11 +289,11 @@ Conversation: ${transcript}`;
         ></div>
 
         <div className="relative z-10 w-48 h-48 rounded-full bg-gradient-to-tr from-emerald-600 to-mint-200 shadow-2xl flex items-center justify-center transition-transform duration-100 overflow-hidden">
-          <div className={`absolute inset - 0 bg - white / 20 ${isSpeaking && settings.voiceResponse ? 'animate-pulse' : ''} `}></div>
+          <div className={`absolute inset-0 bg-white/20 ${isSpeaking && settings.voiceResponse ? 'animate-pulse' : ''}`}></div>
           {isSpeaking && settings.voiceResponse ? (
             <div className="flex gap-1 items-center h-12">
               {[1, 2, 3, 4, 5].map(i => (
-                <div key={i} className="w-2 bg-emerald-900 rounded-full animate-bounce" style={{ height: `${20 + Math.random() * 40} px`, animationDelay: `${i * 0.1} s` }}></div>
+                <div key={i} className="w-2 bg-emerald-900 rounded-full animate-bounce" style={{ height: `${20 + Math.random() * 40}px`, animationDelay: `${i * 0.1}s` }}></div>
               ))}
             </div>
           ) : (
