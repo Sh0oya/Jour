@@ -128,6 +128,9 @@ export const translations = {
     pro_plan: "Plan PRO : 20m/jour.",
     limit_reached: "Limite Atteinte",
 
+    // IAP
+    restore_purchases: "Restaurer mes achats",
+
     // Voice Session
     live: "En direct",
     connecting: "Connexion...",
@@ -266,6 +269,9 @@ export const translations = {
     upgrade_for_20m: "Upgrade to PRO for 20m.",
     pro_plan: "PRO Plan: 20m/day.",
     limit_reached: "Limit Reached",
+
+    // IAP
+    restore_purchases: "Restore purchases",
 
     // Voice Session
     live: "Live",

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { User, UserTier, UserGoal, AIPersonality } from '../types';
 import { useSettings, AVAILABLE_VOICES } from '../contexts/SettingsContext';
-import { Crown, Bell, Moon, LogOut, Check, Sparkles, Target, Mic, Loader2, Key, Download, Upload, Shield } from 'lucide-react';
+import { Crown, Bell, Moon, LogOut, Check, Sparkles, Target, Mic, Loader2, Key, Download, Upload, Shield, RotateCcw } from 'lucide-react';
 import { supabase, SUPABASE_URL } from '../lib/supabase';
 import { backupEncryptionKey, restoreEncryptionKey } from '../utils/crypto';
+import { useIAP, PRODUCT_IDS } from '../hooks/useIAP';
 
 interface SettingsProps {
   user: User;
@@ -29,6 +30,7 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
 
   const [loading, setLoading] = useState<string | null>(null);
   const [portalLoading, setPortalLoading] = useState(false);
+  const iap = useIAP(user.id);
   const [keyBackup, setKeyBackup] = useState<string | null>(null);
   const [showKeyRestore, setShowKeyRestore] = useState(false);
   const [restoreKeyInput, setRestoreKeyInput] = useState('');
@@ -141,22 +143,67 @@ const Settings: React.FC<SettingsProps> = ({ user }) => {
           </div>
 
           {user.tier === UserTier.PRO ? (
-            <button
-              onClick={handleManageSubscription}
-              disabled={portalLoading}
-              className="bg-white text-emerald-900 px-6 py-3 rounded-xl font-bold text-sm shadow-md active:scale-95 transition-transform flex items-center gap-2 disabled:opacity-70"
-            >
-              {portalLoading && <Loader2 size={14} className="animate-spin" />}
-              {t('manage_subscription')}
-            </button>
+            iap.isNative ? (
+              <button
+                onClick={iap.restore}
+                disabled={iap.purchasing}
+                className="bg-white text-emerald-900 px-6 py-3 rounded-xl font-bold text-sm shadow-md active:scale-95 transition-transform flex items-center gap-2 disabled:opacity-70"
+              >
+                {iap.purchasing && <Loader2 size={14} className="animate-spin" />}
+                {t('manage_subscription')}
+              </button>
+            ) : (
+              <button
+                onClick={handleManageSubscription}
+                disabled={portalLoading}
+                className="bg-white text-emerald-900 px-6 py-3 rounded-xl font-bold text-sm shadow-md active:scale-95 transition-transform flex items-center gap-2 disabled:opacity-70"
+              >
+                {portalLoading && <Loader2 size={14} className="animate-spin" />}
+                {t('manage_subscription')}
+              </button>
+            )
+          ) : iap.isNative ? (
+            /* iOS: In-App Purchase buttons */
+            <div className="space-y-2">
+              {iap.error && (
+                <div className="bg-red-100 text-red-800 text-xs p-2 rounded-xl text-center">{iap.error}</div>
+              )}
+              <div className="flex gap-2">
+                <button
+                  onClick={() => iap.purchase(PRODUCT_IDS.monthly)}
+                  disabled={iap.purchasing || iap.loading}
+                  className="flex-1 bg-white text-emerald-900 px-4 py-3 rounded-xl font-bold text-xs shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-70"
+                >
+                  {iap.purchasing && <Loader2 size={12} className="animate-spin" />}
+                  {iap.products.find(p => p.id === PRODUCT_IDS.monthly)?.price || `${t('monthly')} (6,99€)`}
+                </button>
+                <button
+                  onClick={() => iap.purchase(PRODUCT_IDS.yearly)}
+                  disabled={iap.purchasing || iap.loading}
+                  className="flex-1 bg-emerald-400 text-emerald-950 px-4 py-3 rounded-xl font-bold text-xs shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2 disabled:opacity-70"
+                >
+                  {iap.purchasing && <Loader2 size={12} className="animate-spin" />}
+                  {iap.products.find(p => p.id === PRODUCT_IDS.yearly)?.price || `${t('yearly')} (69,99€)`}
+                </button>
+              </div>
+              <button
+                onClick={iap.restore}
+                disabled={iap.purchasing}
+                className="w-full flex items-center justify-center gap-2 text-emerald-100/80 text-xs py-2"
+              >
+                <RotateCcw size={12} />
+                {t('restore_purchases')}
+              </button>
+            </div>
           ) : (
+            /* Web: Stripe Payment Links */
             <div className="flex gap-2">
               <button
                 onClick={() => handleStripeCheckout('monthly')}
                 className="flex-1 bg-white text-emerald-900 px-4 py-3 rounded-xl font-bold text-xs shadow-md active:scale-95 transition-transform flex items-center justify-center gap-2"
               >
                 {loading === 'monthly' && <Loader2 size={12} className="animate-spin" />}
-                {t('monthly')} (6.90€)
+                {t('monthly')} (6,90€)
               </button>
               <button
                 onClick={() => handleStripeCheckout('yearly')}
